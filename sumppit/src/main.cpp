@@ -20,16 +20,16 @@ extern AsyncMqttClient mqttClient;
 //     using D4 will impact the built in LED
 // ----------------------------------------------------
 #include "sr04.hpp"
-SR04 sr04("SR04", D2, D2); // name, pinTrig, pinEcho
+SR04 sr04("SR04", D5, D5); // name, pinTrig, pinEcho
 
 //-- Sensor VL53L0X
-// #include "vl53l0x.hpp"
-// VL53L0X vl53("VL53"); // name. D1 and D2 has to be used
+#include "vl53l0x.hpp"
+VL53L0X vl53("VL53"); // name. D1(SCL) and D2(SDA) has to be used
 
 //-- Sensor DHT11
 #include <Wire.h>
 #include "dht11.hpp"
-DH11 dh11("DH11", D5); // name, pinData
+DH11 dh11("DH11", D7); // name, pinData
 
 void syncTime()
 {
@@ -50,13 +50,13 @@ bool ledBlink = true;
 bool doMeasure = false;
 
 bool ssr_sr04 = true;
-// bool ssr_vl53 = true;
+bool ssr_vl53 = true;
 bool ssr_dh11 = true;
 
 void measure()
 {
  if(ssr_sr04) sr04.sendMeasure();
-//  if(ssr_vl53) vl53.sendMeasure();
+ if(ssr_vl53) vl53.sendMeasure();
  if(ssr_dh11) dh11.sendMeasure();
 }
 
@@ -67,7 +67,7 @@ void cmdHandler(const char* topic, const char* payload)
   {
     int filter = atoi(payload);
     sr04.setFilter(filter);
-//    vl53.setFilter(filter);
+    vl53.setFilter(filter);
     dh11.setFilter(filter);
   }
   if(strcmp(topic, CMD_LED_BLINK) == 0)
@@ -93,6 +93,10 @@ void cmdHandler(const char* topic, const char* payload)
   {
     if(strcmp(payload, "true") == 0) ssr_sr04 = true;
     else ssr_sr04 = false;
+  }else if(strcmp(topic, CMD_SSR_VL53) == 0)
+  {
+    if(strcmp(payload, "true") == 0) ssr_vl53 = true;
+    else ssr_vl53 = false;
   }else if(strcmp(topic, CMD_SSR_DH11) == 0)
   {
     if(strcmp(payload, "true") == 0) ssr_dh11 = true;
@@ -212,7 +216,7 @@ void setup() {
 
   // Set sensor mqtt parameters
   sr04.setMqtt(&mqttClient, MQTT_PUB_SR04, 0, false);
-//  vl53.setMqtt(&mqttClient, MQTT_PUB_VL53, 0, false);
+  vl53.setMqtt(&mqttClient, MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&mqttClient, MQTT_PUB_DH11, 0, false);
   
   setupMqtt();

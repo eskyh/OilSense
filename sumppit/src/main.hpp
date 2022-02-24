@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 //--------------------------------------------------
-#define OTA_HOSTNAME "espOilGauge"
+#define OTA_HOSTNAME "espSumpPit"
 #define OTA_PASSWORD "Hcjmosaic@66"
 
 #ifndef STASSID
@@ -11,7 +11,7 @@
 	#define STAPSK  "Hcjmosaic99"
 #endif
 
-#define PRJNAME "oilgauge"
+#define PRJNAME "sumppit"
 
 #define CMD_SLEEP       PRJNAME"/cmd/sleep"
 #define CMD_LED_BLINK   PRJNAME"/cmd/ledblink"
@@ -22,11 +22,11 @@
 #define CMD_SSR_FILTER  PRJNAME"/cmd/filter"
 
 #define CMD_SSR_SR04    PRJNAME"/cmd/sr04"
-// #define CMD_SSR_VL53    PRJNAME"/cmd/vl53"
+#define CMD_SSR_VL53    PRJNAME"/cmd/vl53"
 #define CMD_SSR_DH11    PRJNAME"/cmd/dh11"
 
 #define MQTT_PUB_SR04   PRJNAME"/sensor/sr04"
-// #define MQTT_PUB_VL53   PRJNAME"/sensor/vl53"
+#define MQTT_PUB_VL53   PRJNAME"/sensor/vl53"
 #define MQTT_PUB_DH11   PRJNAME"/sensor/dh11"
 
 #define MQTT_PUB_HEARTBEAT  PRJNAME"/heartbeat"
