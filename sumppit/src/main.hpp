@@ -20,7 +20,6 @@
 
 
 //-----------------------------------------------------
-
 #define PRJNAME "sumppit"
 
 #define MQTT_SUB_CMD 	PRJNAME"/cmd/#"

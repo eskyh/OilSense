@@ -11,7 +11,17 @@
 	#define STAPSK  "Hcjmosaic99"
 #endif
 
+//--------------------------------------------------
+// Raspberri Pi Mosquitto MQTT Broker
+//#define MQTT_HOST IPAddress(192, 168, 0, 194)
+// For a cloud MQTT broker, type the domain name
+#define MQTT_HOST "raspberrypi.local" //Does not work: "esky.tplinkdns.com"
+#define MQTT_PORT 1883
+
+
 #define PRJNAME "oilgauge"
+
+#define MQTT_SUB_CMD 	PRJNAME"/cmd/#"
 
 #define CMD_SLEEP       PRJNAME"/cmd/sleep"
 #define CMD_LED_BLINK   PRJNAME"/cmd/ledblink"

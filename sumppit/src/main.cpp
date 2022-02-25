@@ -142,7 +142,7 @@ void timerCallback(Timer* timer)
     case ACT_TICK:
     {
       // send heartbeat message
-      myWifi::mqttClient.publish(MQTT_PUB_HEARTBEAT, PUB_QOS, true, "");
+      myWifi::mqttClient.publish(MQTT_PUB_HEARTBEAT, PUB_QOS, true);
 
       // manual measure flag
       // As mqtt call measure directly for DHT11 sensor (not others) will cause crash (see link below)
