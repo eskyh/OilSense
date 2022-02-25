@@ -6,7 +6,7 @@ Sensor::Sensor(const char* name, int nMeasures=1)
 {
   // sizeof: Returns the length of the given byte string, include null terminator;
   // strlen: Returns the length of the given byte string not including null terminator;
-  strncpy(_name, name,sizeof(_name));
+  strncpy(_name, name, sizeof(_name));
 	_nMeasures = nMeasures;
   _lastReadings = (float (*)[5]) calloc(nMeasures, sizeof(float[5]));
 	_measures = (float *) calloc(nMeasures, sizeof(float));

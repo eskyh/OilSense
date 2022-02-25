@@ -43,24 +43,26 @@ void myWifi::connectToWifi()
 {
   WiFi.mode(WIFI_STA);
   WiFi.begin(_ssid, _password);
-  Serial.printf("Connecting to Wi-Fi: '%s' ...\n", _ssid);
+  Serial.print(F("Connecting to Wi-Fi: "));
+  Serial.println(_ssid);
 
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.print(F("."));
     delay(1000);
   }
-  Serial.println();
 }
 
 void myWifi::connectToMqtt()
 {
-  Serial.println(F("Connecting to MQTT..."));
   mqttClient.connect();
+  Serial.print(F("Connecting to MQTT: "));
+  Serial.println(_mqttHost);
 }
 
 void myWifi::onWifiConnect(const WiFiEventStationModeGotIP& event)
 {
-  Serial.printf("Connected to Wi-Fi. IP: %s\n", WiFi.localIP().toString().c_str());
+  Serial.print(F("Connected to Wi-Fi. IP: "));
+  Serial.println(WiFi.localIP().toString().c_str());
   connectToMqtt();
 }
 
@@ -83,13 +85,13 @@ void myWifi::setUpMQTT()
     // set the event callback functions
   mqttClient.onConnect([](bool sessionPresent) {
     Serial.println(F("Connected to MQTT."));
-    #ifdef DEBUG
-      Serial.printf("Session present: %s\n", sessionPresent ? "true" : "false");
+    #ifdef _DEBUG
+      Serial.print("Session present: ");
+      Serial.println(sessionPresent);
     #endif
 
     // subscribe command topics
-    //mqttClient.subscribe(MQTT_SUB_CMD, 2);
-    mqttClient.subscribe("sumppit/cmd/#", 2);
+    mqttClient.subscribe(_cmdTopic, 2);
   });
 
   mqttClient.onDisconnect([](AsyncMqttClientDisconnectReason reason) {
@@ -98,33 +100,45 @@ void myWifi::setUpMQTT()
   });
 
   mqttClient.onSubscribe([](uint16_t packetId, uint8_t qos) {
-    Serial.printf("Subscribe acknowledged. packetId: %d, qos: %d\n", packetId, qos);
+    #ifdef _DEBUG
+      Serial.printf("Subscribe acknowledged. PacketId: %d, qos: %d\n", packetId, qos);
+    #endif
   });
 
   mqttClient.onUnsubscribe([](uint16_t packetId) {
-    Serial.printf("Unsubscribe acknowledged.  packetId: %d\n", packetId);
+    #ifdef _DEBUG
+      Serial.print(F("Unsubscribe acknowledged. PacketId: "));
+      Serial.println(packetId);
+    #endif
   });
 
   mqttClient.onPublish([](uint16_t packetId) {
-    Serial.printf("Publish acknowledged. packetId: %d\n", packetId);
+    #ifdef _DEBUG
+      Serial.print(F("Publish acknowledged. packetId: "));
+      Serial.println(packetId);
+    #endif
   });
 
   mqttClient.onMessage([](char* topic, char* payload,
     AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  //  Serial.println("Publish received.");
-  //  Serial.printf("  topic: %s\n", topic);
-  //  Serial.printf("  qos: %d\n", properties.qos);
-  //  Serial.printf("  dup: %s\n", properties.dup ? "true" : "false");
-  //  Serial.printf("  retain: %s\n", properties.retain ? "true" : "false");
-  //  Serial.printf("  len: %d\n", len);
-  //  Serial.printf("  index: %d\n", index);
-  //  Serial.printf("  total: %d\n", total);
-  //  Serial.printf("  payload: %.*s\n", len, payload);
+    
+    #ifdef _DEBUG
+      Serial.println("Publish received.");
+      Serial.printf("  topic: %s\n", topic);
+      Serial.printf("  qos: %d\n", properties.qos);
+      Serial.printf("  dup: %s\n", properties.dup ? "true" : "false");
+      Serial.printf("  retain: %s\n", properties.retain ? "true" : "false");
+      Serial.printf("  len: %d\n", len);
+      Serial.printf("  index: %d\n", index);
+      Serial.printf("  total: %d\n", total);
+      Serial.printf("  payload: %.*s\n", len, payload);
+    #endif
 
     // Command payload is usually short, 20 is enough
     static char buffer[20];
-    strncpy(buffer, payload, min(len, (size_t)sizeof(buffer)));
-    
+     // copies at most size-1 non-null characters from src to dest and adds a null terminator
+    snprintf(buffer, min(len+1, (size_t)sizeof(buffer)), "%s", payload);
+
     _cmdHandler(topic, buffer);
   });
 

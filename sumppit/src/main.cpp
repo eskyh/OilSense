@@ -60,6 +60,10 @@ void measure()
 //--------------------------------------------------
 void cmdHandler(const char* topic, const char* payload)
 {
+  // pring the command received
+  Serial.println(topic);
+  Serial.println(payload);
+
   if(strcmp(topic, CMD_SSR_FILTER) == 0)
   {
     int filter = atoi(payload);
