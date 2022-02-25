@@ -4,7 +4,9 @@
 
 Sensor::Sensor(const char* name, int nMeasures=1)
 {
-	snprintf(_name, min(sizeof(_name), sizeof(name)+1), "%s\0", name);
+  // sizeof: Returns the length of the given byte string, include null terminator;
+  // strlen: Returns the length of the given byte string not including null terminator;
+  strncpy(_name, name,sizeof(_name));
 	_nMeasures = nMeasures;
   _lastReadings = (float (*)[5]) calloc(nMeasures, sizeof(float[5]));
 	_measures = (float *) calloc(nMeasures, sizeof(float));
@@ -20,13 +22,13 @@ Sensor::~Sensor()
 //     0: At most once
 //     1: At least once
 //     2: Exactly once
-void Sensor::setMqtt(AsyncMqttClient* pClient, char* topic, int qos=0, bool retain=false)
+void Sensor::setMqtt(AsyncMqttClient *pClient, const char* topic, int qos=0, bool retain=false)
 {
   _pMqttClient = pClient;
 
 	// write the default topic of the sensor for mqtt
   // strcpy(_topic, topic);
-  snprintf(_topic, sizeof(_topic), "%s\0", topic);
+  strncpy(_topic, topic, sizeof(_topic));
 
   _qos = qos;
   _retain = retain;
@@ -52,7 +54,7 @@ void Sensor::sendMeasure()
   
   if (_pMqttClient == NULL)
   {
-    Serial.println("MQTT client is not set!");
+    Serial.println(F("MQTT client is not set!"));
     return;
   }
   
@@ -66,7 +68,7 @@ void Sensor::sendMeasure()
     }else
     {
       // #ifdef DEBUG
-      Serial.println("Time is not sync with NTP server yet!");
+      Serial.println(F("Time is not sync with NTP server yet!"));
       // #endif
       return;
     }
@@ -81,7 +83,7 @@ void Sensor::sendMeasure()
 	
 	char* payload = getPayload();
 	Serial.printf("%s: %s\n", _name, payload);
-  uint16_t packetIdPub = _pMqttClient->publish(_topic, _qos, _retain, payload); // retain will clear the chart when deploying!! set it to false
+  _pMqttClient->publish(_topic, _qos, _retain, payload); // retain will clear the chart when deploying!! set it to false
 }
 
 // return measure in cm
@@ -98,14 +100,14 @@ bool Sensor::measure()
     {
       case 0: // no filter results
 				#ifdef DEBUG
-					Serial.println("No filter.");
+					Serial.println(F("No filter."));
 				#endif
         _measures[i] = _lastReadings[i][_index];
         break;
         
       case 1: // Median filter results
 				#ifdef DEBUG
-					Serial.println("Median filter.");
+					Serial.println(F("Median filter."));
 				#endif
     		_measures[i] = _fMedian(
     				_lastReadings[i][0],
@@ -117,20 +119,20 @@ bool Sensor::measure()
 
       case 2: // Kalmen filter results
 				#ifdef DEBUG
-					Serial.println("Kalmen filter.");
+					Serial.println(F("Kalmen filter."));
 				#endif
         _measures[i] = _fKalman(_lastReadings[i][_index]);
         break;
         
       case 3: // EWMA filter
 				#ifdef DEBUG
-					Serial.println("EWMA filter.");
+					Serial.println(F("EWMA filter."));
 				#endif
         _measures[i] = _fEwma(_lastReadings[i][_index]);
         break;
 				
 			default:
-				Serial.println("Invalid filter!");
+				Serial.println(F("Invalid filter!"));
 				return false;
     }
 	}

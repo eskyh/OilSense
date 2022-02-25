@@ -15,7 +15,7 @@ class Sensor
     bool measure();
     void setFilter(int filter);
 
-    void setMqtt(AsyncMqttClient* pClient, char* topic, int qos, bool retain);
+    void setMqtt(AsyncMqttClient *pClient, const char* topic, int qos, bool retain);
     void sendMeasure();
 		virtual char* getPayload() = 0;
 		virtual ~Sensor();

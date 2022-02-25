@@ -1,7 +1,6 @@
 #include "main.hpp"
 
 #include "wifi.hpp"
-#include "mqtt.hpp"
 #include "TZ.h"
 
 #include <time.h>
@@ -9,8 +8,6 @@
 #include <StensTimer.h>
 
 // #include <ArduinoJson.h>
-
-extern AsyncMqttClient mqttClient;
 
 //-- Sensor HC-SR04
 // ----------------------------------------------------
@@ -105,17 +102,17 @@ void cmdHandler(const char* topic, const char* payload)
   {
     if(strcmp(payload, "Modem") == 0)
     {
-       Serial.println("Modem...");
+       Serial.println(F("Modem..."));
       //  uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_INFO, 1, false, "Modem");
     }
     else if(strcmp(payload, "Light") == 0)
     {
-      Serial.println("Light...");
+      Serial.println(F("Light..."));
       // uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_INFO, 1, false, "Light");
     }
     else if(strcmp(payload, "Deep") == 0)
     {
-      Serial.println("Deep...");
+      Serial.println(F("Deep..."));
 
       // After upload code, connect D0 and RST. NOTE: DO NOT connect the pins if using OTG uploading code!
 //      String msg = "I'm awake, but I'm going into deep sleep mode for 60 seconds";
@@ -125,7 +122,7 @@ void cmdHandler(const char* topic, const char* payload)
     }
     else if(strcmp(payload, "Normal") == 0)
     {
-      Serial.println("Normal...");
+      Serial.println(F("Normal..."));
       // uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_INFO, 1, false, "Normal");
     }
   }  
@@ -141,7 +138,7 @@ void timerCallback(Timer* timer)
     case ACT_TICK:
     {
       // send heartbeat message
-      uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_HEARTBEAT, PUB_QOS, true, "");
+      myWifi::mqttClient.publish(MQTT_PUB_HEARTBEAT, PUB_QOS, true, "");
 
       // manual measure flag
       // As mqtt call measure directly for DHT11 sensor (not others) will cause crash (see link below)
@@ -215,12 +212,17 @@ void setup() {
   Serial.begin(115200);      // Serial Communication baudrate: 9600, 115200, 250000
 
   // Set sensor mqtt parameters
-  sr04.setMqtt(&mqttClient, MQTT_PUB_SR04, 0, false);
-  vl53.setMqtt(&mqttClient, MQTT_PUB_VL53, 0, false);
-  dh11.setMqtt(&mqttClient, MQTT_PUB_DH11, 0, false);
+  sr04.setMqtt(&(myWifi::mqttClient), MQTT_PUB_SR04, 0, false);
+  vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
+  dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
-  setupMqtt();
-  setupWifi();
+  myWifi::setWifiCredential(STASSID, STAPSK);
+  myWifi::setOTACredential(OTA_HOSTNAME, OTA_PASSWORD);
+  myWifi::setMqttCredential(MQTT_HOST, MQTT_PORT);
+  myWifi::setupWifi(); // this will setup OTA and MQTT as well
+
+  // setup callback function for command topics
+  myWifi::OnCommand(MQTT_SUB_CMD, cmdHandler); // setup command callback function
 
   //sync time initially, will be adjusted on daily basis in ACT_TIME_SYNC timer
   syncTime();
