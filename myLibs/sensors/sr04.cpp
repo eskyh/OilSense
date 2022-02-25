@@ -44,7 +44,12 @@ bool SR04::_read()
   // of the ping to the reception of its echo off of an object.
   // Reads the PIN_ECHO, returns the sound wave travel time in microseconds
   pinMode(_echoPin, INPUT);  // Sets the PIN_ECHO as an INPUT
-  duration = pulseIn(_echoPin, HIGH, 35000); // microseconds of (total) sound travel. Timeout 35000 milliseconds
+  // You can use pulseIn with interrupts active, but results are less accurate.
+  // ref: https://www.best-microcontroller-projects.com/arduino-pulsein.html
+  noInterrupts();
+  // For a different timeout use an unsigned long value (in microseconds) for the last parameter.
+  duration = pulseIn(_echoPin, HIGH, 35000UL); // microseconds of (total) sound travel, 1e6 is 1s. timeout: default 1 second.
+  interrupts();
 
   // Calculating the distance
   soundSpeed = 331300 + 606 * airTemp; //  mm/s

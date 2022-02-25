@@ -47,8 +47,9 @@ void myWifi::connectToWifi()
   Serial.println(_ssid);
 
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.print(F("."));
-    delay(1000);
+    Serial.println("Connection Failed! Rebooting...");
+    delay(5000);
+    ESP.restart();
   }
 }
 
