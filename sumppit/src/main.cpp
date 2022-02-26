@@ -3,7 +3,6 @@
 #include "wifi.hpp"
 #include "TZ.h"
 
-#include <time.h>
 // https://gitlab.com/arduino-libraries/stens-timer
 #include <StensTimer.h>
 
@@ -28,16 +27,10 @@ VL53L0X vl53("VL53"); // name. D1(SCL) and D2(SDA) has to be used
 #include "dht11.hpp"
 DH11 dh11("DH11", D7); // name, pinData
 
-void syncTime()
-{
-  configTime(TZ_America_New_York, "pool.ntp.org"); // daytime saying will be adjusted by SDK automatically.
-}
-
 //--------------------------------------------------
 // This function is called when a timer has passed
 #define ACT_TICK      1
 #define ACT_SENSOR    2
-#define ACT_TIME_SYNC 3
 
 /* stensTimer variable to be used later in the code */
 StensTimer* pStensTimer = NULL;
@@ -60,9 +53,11 @@ void measure()
 //--------------------------------------------------
 void cmdHandler(const char* topic, const char* payload)
 {
-  // pring the command received
-  Serial.println(topic);
-  Serial.println(payload);
+  #ifdef _DEBUG
+    // pring the command received
+    Serial.println(topic);
+    Serial.println(payload);
+  #endif
 
   if(strcmp(topic, CMD_SSR_FILTER) == 0)
   {
@@ -106,17 +101,23 @@ void cmdHandler(const char* topic, const char* payload)
   {
     if(strcmp(payload, "Modem") == 0)
     {
-       Serial.println(F("Modem..."));
+      #ifdef _DEBUG
+        Serial.println(F("Modem..."));
+      #endif
       //  uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_INFO, 1, false, "Modem");
     }
     else if(strcmp(payload, "Light") == 0)
     {
-      Serial.println(F("Light..."));
+      #ifdef _DEBUG
+        Serial.println(F("Light..."));
+      #endif
       // uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_INFO, 1, false, "Light");
     }
     else if(strcmp(payload, "Deep") == 0)
     {
-      Serial.println(F("Deep..."));
+      #ifdef _DEBUG
+        Serial.println(F("Deep..."));
+      #endif
 
       // After upload code, connect D0 and RST. NOTE: DO NOT connect the pins if using OTG uploading code!
 //      String msg = "I'm awake, but I'm going into deep sleep mode for 60 seconds";
@@ -126,7 +127,9 @@ void cmdHandler(const char* topic, const char* payload)
     }
     else if(strcmp(payload, "Normal") == 0)
     {
-      Serial.println(F("Normal..."));
+      #ifdef _DEBUG
+        Serial.println(F("Normal..."));
+      #endif
       // uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_INFO, 1, false, "Normal");
     }
   }  
@@ -172,12 +175,6 @@ void timerCallback(Timer* timer)
       if(autoMode) measure();
       break;
     }
-      
-    case ACT_TIME_SYNC:
-    {
-      syncTime();
-      break;
-    }
   }
 }
 
@@ -196,20 +193,16 @@ void setup() {
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
   myWifi::setOTACredential(OTA_HOSTNAME, OTA_PASSWORD);
-  myWifi::setMqttCredential(MQTT_HOST, MQTT_PORT);
+  myWifi::setMqttCredential(MQTT_HOST, MQTT_USER, MQTT_PASS, MQTT_PORT);
   myWifi::setupWifi(); // this will setup OTA and MQTT as well
 
   // setup callback function for command topics
   myWifi::OnCommand(MQTT_SUB_CMD, cmdHandler); // setup command callback function
 
-  //sync time initially, will be adjusted on daily basis in ACT_TIME_SYNC timer
-  syncTime();
-
   // Save instance of StensTimer to the tensTimer variable
   pStensTimer = StensTimer::getInstance(); // Tell StensTimer which callback function to use
   pStensTimer->setStaticCallback(timerCallback);
-  pStensTimer->setInterval(ACT_TICK, 5e3);                    // every 5 Second
-  pStensTimer->setInterval(ACT_TIME_SYNC, 86400);             // every 1 Day
+  pStensTimer->setInterval(ACT_TICK, 1e3);                    // every 1 Second
   timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 5e3);   // every 5 Second
 
   // disconnect WiFi when it's no longer needed

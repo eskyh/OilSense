@@ -50,8 +50,6 @@ void Sensor::setFilter(int filter)
 
 void Sensor::sendMeasure()
 {
-  static bool tsync = false;
-  
   if (_pMqttClient == NULL)
   {
     Serial.println(F("MQTT client is not set!"));
@@ -60,19 +58,6 @@ void Sensor::sendMeasure()
   
   // format the payload. Avoid using String!!
   _timestamp = time(NULL); // get current timestamp (in sec), convert it to millisec below
-  if(!tsync)
-  {
-    if(_timestamp > 1645388152)
-    {
-      tsync = true;
-    }else
-    {
-      // #ifdef DEBUG
-      Serial.println(F("Time is not sync with NTP server yet!"));
-      // #endif
-      return;
-    }
-  }
   
   // Accuracy only to 1mm. so output to 1 decimal place.
 	if(!measure())
@@ -82,8 +67,11 @@ void Sensor::sendMeasure()
   }
 	
 	char* payload = getPayload();
-	Serial.printf("%s: %s\n", _name, payload);
   _pMqttClient->publish(_topic, _qos, _retain, payload); // retain will clear the chart when deploying!! set it to false
+
+  #ifdef _DEBUG
+	Serial.printf("%s: %s\n", _name, payload);
+  #endif
 }
 
 // return measure in cm

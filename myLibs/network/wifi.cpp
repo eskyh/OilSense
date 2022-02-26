@@ -1,4 +1,30 @@
 #include "wifi.hpp"
+// <time.h> and <WiFiUdp.h> not needed. already included by core.
+
+void myWifi::syncTimeNTP()
+{
+  // // When time() is called for the first time, the NTP sync is started immediately. It then takes 15 to 200ms or more to complete.
+  configTime(TZ_America_New_York, "pool.ntp.org"); // daytime saying will be adjusted by SDK automatically.
+  time(NULL); // fist call to start sync
+}
+
+void myWifi::waitSyncNTP()
+{
+  #ifdef _DEBUG
+    unsigned long t0 = millis();
+  #endif
+
+  Serial.println("Sync time over NTP...");
+  while(time(NULL) < NTP_MIN_VALID_EPOCH) {
+    delay(500);
+  }
+  Serial.println(F("NTP synced."));
+
+  #ifdef _DEBUG
+    unsigned long t1 = millis() - t0;
+    Serial.println("NTP time first synch took " + String(t1) + "ms");
+  #endif
+}
 
 void myWifi::setOTACredential(const char* otaHostName, const char* otaPassword)
 {
@@ -8,9 +34,11 @@ void myWifi::setOTACredential(const char* otaHostName, const char* otaPassword)
   Serial.println(_otaHostName);
 }
 
-void myWifi::setMqttCredential(const char* mqttHost, int mqttPort=1883)
+void myWifi::setMqttCredential(const char* mqttHost, const char* user, const char* pass, int mqttPort=1883)
 {
   strncpy(_mqttHost, mqttHost, sizeof(_mqttHost));
+  strncpy(_mqttUser, user, sizeof(_mqttUser));
+  strncpy(_mqttPass, pass, sizeof(_mqttPass));
   _mqttPort = mqttPort;
   Serial.print(F("MQTT host: "));
   Serial.print(_mqttHost);
@@ -29,6 +57,7 @@ void myWifi::setupWifi()
   connectToWifi();
   
   setUpOTA();
+  waitSyncNTP();
 }
 
 void myWifi::connectToWifi()
@@ -47,6 +76,8 @@ void myWifi::onWifiConnect(const WiFiEventStationModeGotIP& event)
 {
   Serial.print(F("Connected to Wi-Fi. IP: "));
   Serial.println(WiFi.localIP().toString().c_str());
+
+  syncTimeNTP();
   connectToMqtt();
 }
 
@@ -79,7 +110,8 @@ void myWifi::setUpMQTT()
   });
 
   mqttClient.onDisconnect([](AsyncMqttClientDisconnectReason reason) {
-    Serial.println(F("Disconnected from MQTT."));
+    Serial.print(F("Disconnected from MQTT: #"));
+    Serial.println(int(reason));
     if (WiFi.isConnected()) mqttReconnectTimer.once(2, connectToMqtt);
   });
 
@@ -130,7 +162,7 @@ void myWifi::setUpMQTT()
   mqttClient.setServer(_mqttHost, _mqttPort);
   
   // If your broker requires authentication (username and password), set them below
-  //mqttClient.setCredentials("REPlACE_WITH_YOUR_USER", "REPLACE_WITH_YOUR_PASSWORD");
+  mqttClient.setCredentials(_mqttUser, _mqttPass);
 }
 
 void myWifi::setUpOTA()

@@ -12,7 +12,8 @@
 // For a cloud MQTT broker, type the domain name
 #define MQTT_HOST "raspberrypi.local" //Does not work: "esky.tplinkdns.com"
 #define MQTT_PORT 1883
-
+#define MQTT_USER "cjjiot"
+#define MQTT_PASS "Hcjmosaic@66"
 
 #define PRJNAME "oilgauge"
 
