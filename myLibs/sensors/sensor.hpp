@@ -53,14 +53,17 @@ class Sensor
     // Kalman filter parameters
     float _fKalman(double U);
 
-    double R = 40;
-    double H = 1.00;
-    double Q = 10;
-    
-    double P = 0;
-    double U_hat = 0;
-    double K = 0;
+    //  const double F = 1.0; // true state coeff
+    //  const couble B = 0.0; // there is no control input
+    const double H = 1.0; // measurement coeff
 
+    const double Q = 10;   // initial estimated covariance
+    const double R = 40.0; // noise covariance. The higher R, the less K
+
+    double K = 0;          // Kalmen gain, the higher K, the more weight to the new observation
+    double P = 0;          // initial error covariance (must be 0)
+    double X_hat = 0;      // initial estimated state (assume unknown)
+    
     // EWMA filter
     float _fEwma(double measure);
     float _ewma = 0;

@@ -156,7 +156,7 @@ bool Sensor::measure()
 float Sensor::_fMedian(float a, float b, float c, float d, float e)
 {
     sort(a,b);
-    sort(d,e);  
+    sort(d,e);
     sort(a,c);
     sort(b,c);
     sort(a,d);  
@@ -172,22 +172,34 @@ float Sensor::_fMedian(float a, float b, float c, float d, float e)
 float Sensor::_fEwma(double measure)
 {
   static const double lambda = 0.5; // The smaller, the more weight put on the new data
-  
-  _ewma = lambda*_ewma + (1-lambda)*measure;
+
+  if(_ewma == 0) _ewma = measure; // initial value
+  else _ewma = lambda*_ewma + (1-lambda)*measure;
   return _ewma;
 }
 
 // https://github.com/rizkymille/ultrasonic-hc-sr04-kalman-filter/blob/master/hc-sr04_kalman_filter/hc-sr04_kalman_filter.ino
-float Sensor::_fKalman(double U)
+// https://en.wikipedia.org/wiki/Kalman_filter
+// http://bilgin.esme.org/BitsAndBytes/KalmanFilterforDummies <= nice one!
+float Sensor::_fKalman(double Z)
 {
-//  static const double R = 40;
-//  static const double H = 1.00;
-//  static double Q = 10;
-//  static double P = 0;
-//  static double U_hat = 0;
-//  static double K = 0;
-  K = P*H/(H*P*H+R);
-  U_hat += + K*(U-H*U_hat);
-  P = (1-K*H)*P+Q;
-  return U_hat;
+//  static const double F = 1.0; // true state coeff
+//  static const couble B = 0.0; // there is no control input
+//  static const double H = 1.0; // measurement coeff
+
+//  static const double Q = 10;   // initial estimated covariance
+//  static const double R = 40.0; // noise covariance. The higher R, the less K
+
+//  static double K = 0;          // Kalmen gain, the higher K, the more weight to the new observation
+//  static double P = 0;          // initial error covariance (must be 0)
+//  static double X_hat = 0;      // initial estimated state (assume unknown)
+
+  if(X_hat == 0) X_hat = Z;  // initial estimated state set to the first measure
+  else
+  {
+    K = P*H/(H*P*H+R);      // Optimal Kalman gain
+    X_hat += K*(Z-H*X_hat); // Updated (a posteriori) state estimate. F=1.0, ignored
+    P = (1-K*H)*(P+Q);      // Updated (a posteriori) estimate covariance (F=1.0)
+  }
+  return X_hat;
 }
