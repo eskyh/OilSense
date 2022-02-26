@@ -8,15 +8,26 @@
 
 #include <Ticker.h>
 
+//needed for library
+#include <DNSServer.h>
+#if defined(ESP8266)
+  #include <ESP8266WebServer.h>
+#else
+  #include <WebServer.h>
+#endif
+#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
+
+
 typedef std::function<void(char* topic, char* payload)> CommandHandler;
 
 class myWifi
 {
   public:
-    static void setWifiCredential(const char* ssid, const char* password);
     static void setOTACredential(const char* otaHostName, const char* otaPassword);
     static void setMqttCredential(const char* mqttHost, int mqttPort);
 
+    // apName is the wifi ssid of the AP mode of the controller.
+    // Connect this wifi ssid to select the actual wifi ssid
     static void setupWifi();
     static void connectToWifi();
 
@@ -31,11 +42,10 @@ class myWifi
     inline static AsyncMqttClient mqttClient;
 
   protected:
-    // https://stackoverflow.com/questions/9110487/undefined-reference-to-a-static-member
+    inline static WiFiManager _wifiManager;
+    inline static char _apName[20];
 
-    // WiFi ssid and pass
-    inline static char _ssid[15];
-    inline static char _password[15];
+    // https://stackoverflow.com/questions/9110487/undefined-reference-to-a-static-member
 
     // OTA host name and pass
     inline static char _otaHostName[20];

@@ -6,11 +6,6 @@
 #define OTA_HOSTNAME "espOilGauge"
 #define OTA_PASSWORD "Hcjmosaic@66"
 
-#ifndef STASSID
-	#define STASSID "ESky"
-	#define STAPSK  "Hcjmosaic99"
-#endif
-
 //--------------------------------------------------
 // Raspberri Pi Mosquitto MQTT Broker
 //#define MQTT_HOST IPAddress(192, 168, 0, 194)

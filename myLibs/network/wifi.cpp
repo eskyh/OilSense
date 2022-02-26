@@ -1,14 +1,5 @@
 #include "wifi.hpp"
 
-void myWifi::setWifiCredential(const char* ssid, const char* password)
-{
-  strncpy(_ssid, ssid, sizeof(_ssid));
-  strncpy(_password, password, sizeof(_password));
-  // Serial.println(password);
-  // Serial.println(sizeof(password));
-  // Serial.println(_password);
-}
-
 void myWifi::setOTACredential(const char* otaHostName, const char* otaPassword)
 {
   strncpy(_otaHostName, otaHostName, sizeof(_otaHostName));
@@ -36,21 +27,13 @@ void myWifi::setupWifi()
   wifiConnectHandler = WiFi.onStationModeGotIP(onWifiConnect);
   wifiDisconnectHandler = WiFi.onStationModeDisconnected(onWifiDisconnect);
   connectToWifi();
+  
   setUpOTA();
 }
 
 void myWifi::connectToWifi()
 {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(_ssid, _password);
-  Serial.print(F("Connecting to Wi-Fi: "));
-  Serial.println(_ssid);
-
-  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
-    ESP.restart();
-  }
+  _wifiManager.autoConnect();
 }
 
 void myWifi::connectToMqtt()

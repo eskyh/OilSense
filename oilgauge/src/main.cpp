@@ -220,7 +220,6 @@ void setup() {
 //  vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
-  myWifi::setWifiCredential(STASSID, STAPSK);
   myWifi::setOTACredential(OTA_HOSTNAME, OTA_PASSWORD);
   myWifi::setMqttCredential(MQTT_HOST, MQTT_PORT);
   myWifi::setupWifi(); // this will setup OTA and MQTT as well
@@ -234,7 +233,7 @@ void setup() {
   // Save instance of StensTimer to the tensTimer variable
   pStensTimer = StensTimer::getInstance(); // Tell StensTimer which callback function to use
   pStensTimer->setStaticCallback(timerCallback);
-  pStensTimer->setInterval(ACT_TICK, 1e3);                    // every 1 Second
+  pStensTimer->setInterval(ACT_TICK, 5e3);                    // every 5 Second
   pStensTimer->setInterval(ACT_TIME_SYNC, 86400);             // every 1 Day
   timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 5e3);   // every 5 Second
 

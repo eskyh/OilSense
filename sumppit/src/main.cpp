@@ -181,32 +181,7 @@ void timerCallback(Timer* timer)
   }
 }
 
-//--------------------------------------------------
-// https://stackoverflow.com/questions/5459868/concatenate-int-to-string-using-c-preprocessor
-// #define STR_HELPER(x) #x
-// #define STR(x) STR_HELPER(x)
-
 void setup() {
-
-  //--------------------------------------------------
-  // Setup the configuration
-
-  // DynamicJsonDocument doc(1024);
-
-  // // You can use a Flash String as your JSON input.
-  // // WARNING: the strings in the input will be duplicated in the JsonDocument.
-  // deserializeJson(doc, F(
-  //   "{\"name\":\"oilgauge\",\"ota\":\"espOilGauge\","
-  //     "\"sensors\":["
-  //       "{\"type\":\"HC-SR04\",\"name\":\"sr04\",\"pinTrig\":"STR(D2)",\"pinEcho\":"STR(D2)"},"
-  //       "{\"type\":\"VL53L0X\",\"name\":\"vl53\"},"
-  //       "{\"type\":\"DHT11\",\"name\":\"dh11\",\"pinData\":"STR(D5)"}]}"
-  //   ));
-  // JsonObject obj = doc.as<JsonObject>();
-
-
-  //--------------------------------------------------
-  // Configure the hardware
 
   // initialize digital pin LED_BUILTIN as an output (used as heatbeat indicator of the board).
   pinMode(LED_BUILTIN, OUTPUT);
@@ -220,7 +195,6 @@ void setup() {
   vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
-  myWifi::setWifiCredential(STASSID, STAPSK);
   myWifi::setOTACredential(OTA_HOSTNAME, OTA_PASSWORD);
   myWifi::setMqttCredential(MQTT_HOST, MQTT_PORT);
   myWifi::setupWifi(); // this will setup OTA and MQTT as well
