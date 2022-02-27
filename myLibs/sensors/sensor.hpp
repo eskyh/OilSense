@@ -9,13 +9,13 @@
 class Sensor
 {
   public:
-		Sensor(const char* name, int nMeasures);
+		Sensor(const char* name, int nMeasures=1);
 
     // Returns the measurement in an array (in cm)
     bool measure();
     void setFilter(int filter);
 
-    void setMqtt(AsyncMqttClient *pClient, const char* topic, int qos, bool retain);
+    void setMqtt(AsyncMqttClient *pClient, const char* topic, int qos=0, bool retain=false);
     void sendMeasure();
 		virtual char* getPayload() = 0;
 		virtual ~Sensor();

@@ -2,7 +2,7 @@
 
 #include "sensor.hpp"
 
-Sensor::Sensor(const char* name, int nMeasures=1)
+Sensor::Sensor(const char* name, int nMeasures)
 {
   // sizeof: Returns the length of the given byte string, include null terminator;
   // strlen: Returns the length of the given byte string not including null terminator;
@@ -22,7 +22,7 @@ Sensor::~Sensor()
 //     0: At most once
 //     1: At least once
 //     2: Exactly once
-void Sensor::setMqtt(AsyncMqttClient *pClient, const char* topic, int qos=0, bool retain=false)
+void Sensor::setMqtt(AsyncMqttClient *pClient, const char* topic, int qos, bool retain)
 {
   _pMqttClient = pClient;
 

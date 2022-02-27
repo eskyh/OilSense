@@ -20,18 +20,38 @@
 
 #define NTP_MIN_VALID_EPOCH 1640995200  // 1/2/2022. Use https://www.epochconverter.com/
 
+struct Settings {
+    //Wifi ssid and pass
+    char ssid[20];
+    char pass[15];
+
+    // MQTT host name and port
+    char mqttHost[20];
+    int mqttPort = 1883;
+    char mqttUser[20];
+    char mqttPass[15];
+
+    // OTA host name and pass
+    char otaHost[20];
+    char otaPass[15];
+};
+
 typedef std::function<void(char* topic, char* payload)> CommandHandler;
 
 class myWifi
 {
   public:
-    static void setOTACredential(const char* otaHostName, const char* otaPassword);
-    static void setMqttCredential(const char* mqttHost, const char* user, const char* pass, int mqttPort);
+    //------------------------------------
+    // Wifi portal
+    // static void setOTACredential(const char* otaHostName, const char* otaPassword);
+    // static void setMqttCredential(const char* mqttHost, const char* user, const char* pass); //, int mqttPort);
+    inline static bool connect = false;
+    inline static ESP8266WebServer server = ESP8266WebServer(80);
 
-    // apName is the wifi ssid of the AP mode of the controller.
-    // Connect this wifi ssid to select the actual wifi ssid
-    static void setupWifi();
-    static void connectToWifi();
+    static void setupWifiListener();
+    static void autoConnect();
+    static void handlePortal();
+    static bool startConfigPortal(char const *apName, char const *apPassword);
 
     static void syncTimeNTP();
     static void waitSyncNTP();
@@ -46,22 +66,17 @@ class myWifi
     // static member has to be defined with inline here or in .cpp
     inline static AsyncMqttClient mqttClient;
 
+
+    // settings
+    static void getSettings();
+    static void setSettings();
+    inline static Settings settings;
+
   protected:
-    inline static WiFiManager _wifiManager;
-    inline static char _apName[20];
+    // inline static WiFiManager _wifiManager;
+    // inline static char _apName[20];
 
     // https://stackoverflow.com/questions/9110487/undefined-reference-to-a-static-member
-
-    // OTA host name and pass
-    inline static char _otaHostName[20];
-    inline static char _otaPassword[15];
-
-    // MQTT host name and port
-    inline static char _mqttHost[20];
-    inline static int _mqttPort;
-    inline static char _mqttUser[20];
-    inline static char _mqttPass[15];
-
     inline static Ticker wifiReconnectTimer;
     inline static Ticker mqttReconnectTimer;
 
@@ -70,9 +85,6 @@ class myWifi
 
     inline static CommandHandler _cmdHandler;
     inline static char _cmdTopic[20];
-
-    static void onWifiConnect(const WiFiEventStationModeGotIP& event);
-    static void onWifiDisconnect(const WiFiEventStationModeDisconnected& event);
 
   private:
     // Disallow creating an instance of this object by putting constructor in private

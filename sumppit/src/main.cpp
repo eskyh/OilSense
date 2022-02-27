@@ -1,7 +1,7 @@
 #include "main.hpp"
 
 #include "wifi.hpp"
-#include "TZ.h"
+// #include "TZ.h"
 
 // https://gitlab.com/arduino-libraries/stens-timer
 #include <StensTimer.h>
@@ -135,6 +135,7 @@ void cmdHandler(const char* topic, const char* payload)
   }  
 }
 
+
 //--------------------------------------------------
 void timerCallback(Timer* timer)
 {
@@ -187,15 +188,14 @@ void setup() {
   
   Serial.begin(115200);      // Serial Communication baudrate: 9600, 115200, 250000
 
+  myWifi::setupWifiListener();
+  myWifi::autoConnect();
+
   // Set sensor mqtt parameters
   sr04.setMqtt(&(myWifi::mqttClient), MQTT_PUB_SR04, 0, false);
   vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
-  myWifi::setOTACredential(OTA_HOSTNAME, OTA_PASSWORD);
-  myWifi::setMqttCredential(MQTT_HOST, MQTT_USER, MQTT_PASS, MQTT_PORT);
-  myWifi::setupWifi(); // this will setup OTA and MQTT as well
-
   // setup callback function for command topics
   myWifi::OnCommand(MQTT_SUB_CMD, cmdHandler); // setup command callback function
 
