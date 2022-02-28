@@ -36,14 +36,14 @@ void myWifi::setupWifiListener()
     Serial.println(WiFi.localIP().toString().c_str());
     syncTimeNTP();
     setUpMQTT();
-    connectToMqtt();
+    connectToMqtt(); //or mqttReconnectTimer.once(1, connectToMqtt);
     setUpOTA();
   });
 
   wifiDisconnectHandler = WiFi.onStationModeDisconnected([] (const WiFiEventStationModeDisconnected& event)
     {
       Serial.println(F("Disconnected from Wi-Fi."));
-      mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+      // mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
       wifiReconnectTimer.once(2, autoConnect);
     });
 }
@@ -56,7 +56,7 @@ void myWifi::autoConnect()
   WiFi.mode(WIFI_STA);
   WiFi.begin();
   //uncomment below to trigger startConfigPortal
-  WiFi.disconnect(true);
+  // WiFi.disconnect(true);
 
   byte tries = 0;
   while (WiFi.status() != WL_CONNECTED) {
@@ -193,6 +193,13 @@ void myWifi::connectToMqtt()
   Serial.println(settings.mqttHost);
 }
 
+void myWifi::subscribeMqtt()
+{
+  Serial.println(F("listen for commands..."));
+   // subscribe command topics
+   mqttClient.subscribe(_cmdTopic, 2);
+}
+
 void myWifi::OnCommand(const char* cmdTopic, CommandHandler cmdHandler)
 {
   strncpy(_cmdTopic, cmdTopic, sizeof(_cmdTopic));
@@ -209,13 +216,35 @@ void myWifi::setUpMQTT()
       Serial.println(sessionPresent);
     #endif
 
-    // subscribe command topics
-    mqttClient.subscribe(_cmdTopic, 2);
+    // subscribe command topics. Do not call subscribeMqtt() directly in eventHandler.
+    // Better call it with a schedule timer!! Also do not use delay() in eventhandler as well!
+    // refer https://github.com/marvinroger/async-mqtt-client/issues/264
+    mqttsubscribeTimer.once(1, subscribeMqtt);
   });
 
   mqttClient.onDisconnect([](AsyncMqttClientDisconnectReason reason) {
-    Serial.print(F("Disconnected from MQTT: #"));
-    Serial.println(int(reason));
+    Serial.print("Disconnected from MQTT, reason: ");
+    if (reason == AsyncMqttClientDisconnectReason::TLS_BAD_FINGERPRINT) {
+      Serial.println("Bad server fingerprint.");
+    } else if (reason == AsyncMqttClientDisconnectReason::TCP_DISCONNECTED) {
+      Serial.println("TCP Disconnected.");
+    } else if (reason == AsyncMqttClientDisconnectReason::MQTT_UNACCEPTABLE_PROTOCOL_VERSION) {
+      Serial.println("Bad server fingerprint.");
+    } else if (reason == AsyncMqttClientDisconnectReason::MQTT_IDENTIFIER_REJECTED) {
+      Serial.println("MQTT Identifier rejected.");
+    } else if (reason == AsyncMqttClientDisconnectReason::MQTT_SERVER_UNAVAILABLE) {
+      Serial.println("MQTT server unavailable.");
+    } else if (reason == AsyncMqttClientDisconnectReason::MQTT_MALFORMED_CREDENTIALS) {
+      Serial.println("MQTT malformed credentials.");
+    } else if (reason == AsyncMqttClientDisconnectReason::MQTT_NOT_AUTHORIZED) {
+      Serial.println("MQTT not authorized.");
+    } else if (reason == AsyncMqttClientDisconnectReason::ESP8266_NOT_ENOUGH_SPACE) {
+      Serial.println("Not enough space on esp8266.");
+    }
+
+    // subscribe command topics. Do not call connectToMqtt() directly in eventHandler.
+    // Better call it with a schedule timer!! Also do not use delay() in eventhandler as well!
+    // refer https://github.com/marvinroger/async-mqtt-client/issues/264
     if (WiFi.isConnected()) mqttReconnectTimer.once(2, connectToMqtt);
   });
 

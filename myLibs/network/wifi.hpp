@@ -58,6 +58,7 @@ class myWifi
 
     static void setUpMQTT();
     static void connectToMqtt();
+    static void subscribeMqtt();
 
     static void setUpOTA();
 
@@ -79,6 +80,7 @@ class myWifi
     // https://stackoverflow.com/questions/9110487/undefined-reference-to-a-static-member
     inline static Ticker wifiReconnectTimer;
     inline static Ticker mqttReconnectTimer;
+    inline static Ticker mqttsubscribeTimer;
 
     inline static WiFiEventHandler wifiConnectHandler;
     inline static WiFiEventHandler wifiDisconnectHandler;
