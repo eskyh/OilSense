@@ -36,7 +36,7 @@ struct Settings {
     char otaPass[15];
 };
 
-typedef std::function<void(char* topic, char* payload)> CommandHandler;
+typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
 class myWifi
 {
@@ -45,13 +45,14 @@ class myWifi
     // Wifi portal
     // static void setOTACredential(const char* otaHostName, const char* otaPassword);
     // static void setMqttCredential(const char* mqttHost, const char* user, const char* pass); //, int mqttPort);
-    inline static bool connect = false;
+    inline static bool portalOn = false; // indicate if configuration portal is on
+    inline static char portalReason[50]; // reason of open portal
     inline static ESP8266WebServer server = ESP8266WebServer(80);
 
     static void setupWifiListener();
     static void autoConnect();
     static void handlePortal();
-    static bool startConfigPortal(char const *apName, char const *apPassword);
+    static bool startConfigPortal(); //char const *apName, char const *apPassword);
 
     static void syncTimeNTP();
     static void waitSyncNTP();
@@ -89,6 +90,8 @@ class myWifi
     inline static char _cmdTopic[20];
 
   private:
+    inline static byte _nMqttReconnect = 0;
+
     // Disallow creating an instance of this object by putting constructor in private
     myWifi() {};
 };

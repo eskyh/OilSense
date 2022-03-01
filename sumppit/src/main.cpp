@@ -1,7 +1,5 @@
 #include "main.hpp"
-
 #include "wifi.hpp"
-// #include "TZ.h"
 
 // https://gitlab.com/arduino-libraries/stens-timer
 #include <StensTimer.h>
@@ -43,6 +41,9 @@ bool ssr_sr04 = true;
 bool ssr_vl53 = true;
 bool ssr_dh11 = true;
 
+bool openCfgPortal = false;
+// char reason[50]; // reason to open portal
+
 void measure()
 {
  if(ssr_sr04) sr04.sendMeasure();
@@ -59,14 +60,16 @@ void cmdHandler(const char* topic, const char* payload)
     Serial.println(payload);
   #endif
 
-  if(strcmp(topic, CMD_SSR_FILTER) == 0)
+  if(strcmp(topic, CMD_OPEN_PORTAL) == 0)
+  {
+    openCfgPortal = true;
+  }else if(strcmp(topic, CMD_SSR_FILTER) == 0)
   {
     int filter = atoi(payload);
     sr04.setFilter(filter);
     vl53.setFilter(filter);
     dh11.setFilter(filter);
-  }
-  if(strcmp(topic, CMD_LED_BLINK) == 0)
+  }else if(strcmp(topic, CMD_LED_BLINK) == 0)
   {
     if(strcmp(payload, "true") == 0) ledBlink = true;
     else ledBlink = false;
@@ -217,4 +220,10 @@ void loop() {
 
   // Give processing time for ArduinoOTA
   ArduinoOTA.handle();
+
+  if(openCfgPortal)
+  {
+    myWifi::startConfigPortal();
+    openCfgPortal = false;
+  }
 }

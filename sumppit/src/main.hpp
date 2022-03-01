@@ -20,6 +20,8 @@
 
 #define MQTT_SUB_CMD 	PRJNAME"/cmd/#"
 
+#define CMD_OPEN_PORTAL "cmdOpenPortal"        // this is not sent from MQTT, instead sent from wifi module when there is connection issues!!
+
 #define CMD_SLEEP       PRJNAME"/cmd/sleep"
 #define CMD_LED_BLINK   PRJNAME"/cmd/ledblink"
 #define CMD_AUTO        PRJNAME"/cmd/auto"  // auto or manual mode for measurement
