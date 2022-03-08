@@ -14,7 +14,8 @@
 //     using D4 will impact the built in LED
 // ----------------------------------------------------
 #include "sr04.hpp"
-SR04 sr04("SR04", D2, D2); // name, pinTrig, pinEcho
+// SR04 sr04("SR04", D2, D2); // name, pinTrig, pinEcho
+SR04 sr04("SR04", D1, D2); // name, pinTrig, pinEcho
 
 //-- Sensor VL53L0X
 // #include "vl53l0x.hpp"

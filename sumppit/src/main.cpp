@@ -14,7 +14,7 @@
 //     using D4 will impact the built in LED
 // ----------------------------------------------------
 #include "sr04.hpp"
-SR04 sr04("SR04", D5, D5); // name, pinTrig, pinEcho
+SR04 sr04("SR04", D6, D6); // name, pinTrig, pinEcho
 
 //-- Sensor VL53L0X
 #include "vl53l0x.hpp"
@@ -23,7 +23,7 @@ VL53L0X vl53("VL53"); // name. D1(SCL) and D2(SDA) has to be used
 //-- Sensor DHT11
 #include <Wire.h>
 #include "dht11.hpp"
-DH11 dh11("DH11", D7); // name, pinData
+DH11 dh11("DH11", D5); // name, pinData
 
 //--------------------------------------------------
 // This function is called when a timer has passed

@@ -3,8 +3,8 @@
 #include <Arduino.h>
 
 //--------------------------------------------------
-#define OTA_HOSTNAME "espSumpPit"
-#define OTA_PASSWORD "Hcjmosaic@66"
+// #define OTA_HOSTNAME "espSumpPit"
+// #define OTA_PASSWORD "Hcjmosaic@66"
 
 //--------------------------------------------------
 // Raspberri Pi Mosquitto MQTT Broker

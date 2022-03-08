@@ -53,14 +53,16 @@ void myWifi::autoConnect()
   // read settings from EEPROM
   getSettings();
 
+  Serial.println(F("Connecting WiFi..."));
+  // // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
   WiFi.mode(WIFI_STA);
-  WiFi.begin();
+  WiFi.begin(settings.ssid, settings.pass);
   //uncomment below to trigger startConfigPortal
   // WiFi.disconnect(true);
 
   byte tries = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    if (tries++ > 3) {
+    if (tries++ > 10) {
       // String ssid = "ESP-" + String(ESP.getChipId());
       // startConfigPortal(ssid.c_str(), NULL);
       #ifdef _DEBUG
@@ -121,7 +123,7 @@ bool myWifi::startConfigPortal() //char const *apName, char const *apPassword)
       delay(1000); // leave enough time for handlePortal server.send() to complete.
       Serial.println("Configure completed. Start connecting WiFi...");
       WiFi.mode(WIFI_STA);
-      WiFi.begin(myWifi::settings.ssid, myWifi::settings.pass);
+      WiFi.begin(settings.ssid, settings.pass);
       break;
     }
     yield();

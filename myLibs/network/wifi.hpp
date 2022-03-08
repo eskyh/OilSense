@@ -16,7 +16,7 @@
 #include <ArduinoOTA.h>
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
-#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
+// #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
 #define NTP_MIN_VALID_EPOCH 1640995200  // 1/2/2022. Use https://www.epochconverter.com/
 
