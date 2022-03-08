@@ -18,7 +18,12 @@
 #include <AsyncMqttClient.h>
 // #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
+// https://gitlab.com/arduino-libraries/stens-timer
+#include <StensTimer.h>
+
 #define NTP_MIN_VALID_EPOCH 1640995200  // 1/2/2022. Use https://www.epochconverter.com/
+
+#define ACT_NETWORK   3
 
 struct Settings {
     //Wifi ssid and pass
@@ -50,9 +55,10 @@ class myWifi
     inline static ESP8266WebServer server = ESP8266WebServer(80);
 
     static void setupWifiListener();
+    static void connect();
     static void autoConnect();
     static void handlePortal();
-    static bool startConfigPortal(); //char const *apName, char const *apPassword);
+    static void startConfigPortal(bool force=false); //char const *apName, char const *apPassword);
 
     static void syncTimeNTP();
     static void waitSyncNTP();
@@ -69,6 +75,10 @@ class myWifi
     inline static AsyncMqttClient mqttClient;
 
 
+    // inline static StensTimer* pStensTimer = NULL;
+    // static void timerCallback(Timer* timer);
+    static bool pollPortal(bool force);
+
     // settings
     static void getSettings();
     static void setSettings();
@@ -82,6 +92,10 @@ class myWifi
     inline static Ticker wifiReconnectTimer;
     inline static Ticker mqttReconnectTimer;
     inline static Ticker mqttsubscribeTimer;
+
+    inline static Ticker portalTimer;
+
+    
 
     inline static WiFiEventHandler wifiConnectHandler;
     inline static WiFiEventHandler wifiDisconnectHandler;

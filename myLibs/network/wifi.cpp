@@ -44,17 +44,36 @@ void myWifi::setupWifiListener()
     {
       Serial.println(F("Disconnected from Wi-Fi."));
       // mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-      if(!portalOn) wifiReconnectTimer.once(2, autoConnect);
+      // if(!portalOn) wifiReconnectTimer.once(2, autoConnect);
+      wifiReconnectTimer.once(2, connect);
     });
+}
+
+void myWifi::connect()
+{
+  Serial.println(F("Connecting WiFi..."));
+  // // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
+  // WiFi.persistent(false);
+  // WiFi.disconnect();
+
+  // do not change the mode (can be WIFI_STA or WIFI_AP_STA), just reconnect
+  WiFi.begin(settings.ssid, settings.pass);
 }
 
 void myWifi::autoConnect()
 {
+  // if(myWifi::pStensTimer == NULL)
+  // {
+  //   Serial.println("Set StensTimer.");
+  //   pStensTimer = StensTimer::getInstance();
+  //   // pStensTimer->setStaticCallback(myWifi::timerCallback);
+  // }
+
   // read settings from EEPROM
   getSettings();
 
   Serial.println(F("Connecting WiFi..."));
-  // // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
+  // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
   WiFi.mode(WIFI_STA);
   WiFi.begin(settings.ssid, settings.pass);
   //uncomment below to trigger startConfigPortal
@@ -63,43 +82,55 @@ void myWifi::autoConnect()
   byte tries = 0;
   while (WiFi.status() != WL_CONNECTED) {
     if (tries++ > 10) {
-      // String ssid = "ESP-" + String(ESP.getChipId());
-      // startConfigPortal(ssid.c_str(), NULL);
       #ifdef _DEBUG
         Serial.println(F("Can not connect WiFi. Start portal..."));
       #endif
-      strncpy(portalReason, "WiFi connect failure!", sizeof(portalReason));
-      startConfigPortal();
+
+      // this inform the main loop to open portal! (Can not handle it in the event handler or timer)
+      if(_cmdHandler!= NULL)
+      {
+        _cmdHandler("cmdOpenPortal", NULL);
+        strncpy(portalReason, "Wifi connect failure!", sizeof(portalReason));      
+      }else
+      {
+        Serial.println(F("cmdHandler is not set!"));
+      }
       break;
     }
     delay(1000);
   }
 
-  Serial.println("Wifi connected");
-
-  if(WiFi.isConnected()) waitSyncNTP();    
+  if(WiFi.isConnected()) waitSyncNTP();
 }
 
 // This will start a AP allowing user to configure all settings by accessing
 // a webserver on the AP. To access the page, connect to the AP ssid (ESP-XXXX)
 // From browser input 192.168.4.1 (Check the serial port prompt for the actual AP IP address)
-bool myWifi::startConfigPortal() //char const *apName, char const *apPassword)
+void myWifi::startConfigPortal(bool force) //char const *apName, char const *apPassword)
  {
+   Serial.print("Force mode: ");
+   Serial.println(force);
+
   // connect will be set to true when the configuration is done in handlePortal
   portalOn = true;
 
-  if(!WiFi.isConnected()){
-    WiFi.persistent(false);
-    // disconnect sta, start ap
-    WiFi.disconnect(); //  this alone is not enough to stop the autoconnecter
-    WiFi.mode(WIFI_AP);
-    WiFi.persistent(true);
-  }
-  else {
-    //setup AP
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_AP_STA);
-  }
+  // if(!WiFi.isConnected()){
+  //   WiFi.persistent(false);
+  //   // disconnect sta, start ap
+  //   WiFi.disconnect(); //  this alone is not enough to stop the autoconnecter
+  //   WiFi.mode(WIFI_AP);
+  //   WiFi.persistent(true);
+  // }
+  // else {
+  //   //setup AP
+  //   // WiFi.disconnect(true);
+  //   WiFi.mode(WIFI_AP_STA);
+  // }
+
+  // use WIFI_AP_STA model such that WiFi reconnecting still going on
+  // This is useful when the router is off. Once router is back on
+  // the WiFi will reconnect and close the portal automatically.
+  WiFi.mode(WIFI_AP_STA);
 
   String ssidAP = "ESP-" + String(ESP.getChipId());
   WiFi.softAP(ssidAP.c_str(), NULL); // apPassword);
@@ -112,25 +143,119 @@ bool myWifi::startConfigPortal() //char const *apName, char const *apPassword)
   Serial.println(WiFi.softAPIP());
   Serial.println(F("Connect AP Wifi and access the IP from Browser for configuration."));
 
-  // a loop to enable the server process client request and will invoke the
-  // callback function handlePortal set above. The loop will be running untill
-  // the connect is set to true within handlePortal when configuration is done.
-  while(true)
+  // Timer *timer = pStensTimer->setInterval(ACT_NETWORK, 1e3);
+  // Serial.print("Timer: ");
+  // Serial.println(timer!=NULL);
+  
+  
+  // pollPortal(force);
+
+  // // A loop to enable the server process client request and will invoke the
+  // // callback function handlePortal set above. The loop will be running untill
+  // // the connect is set to true within handlePortal when configuration is done.
+  // //---------------------------------------------------------------------------
+  // // Stop condition: 1) Configuration form submitted
+  // //                 2) Portal non-force open, WiFi and MQTT are reconnected
+  // while(true)
+  // {
+  //   server.handleClient();
+
+  //   if (!portalOn) 
+  //   {
+  //     delay(1000); // leave enough time for handlePortal server.send() to complete.
+
+  //     Serial.println(F("Configuration portal completed."));
+  //     // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
+  //     Serial.println(F("Close AP."));
+  //     WiFi.softAPdisconnect(true);
+  //     WiFi.mode(WIFI_STA);
+  //     if(!WiFi.isConnected())
+  //     {
+  //       Serial.println(F("Reconnect WiFi..."));
+  //       WiFi.begin(settings.ssid, settings.pass);
+  //     }
+  //     break;
+  //   }
+
+  //   // return if WiFi is connected and mqtt is connected
+  //   // this can happen when wifi is still reconnect periodically while the portal is on
+  //   // Serial.print("WiFi status:");
+  //   // Serial.println(WiFi.isConnected());
+  //   // Serial.print("MQTT status:");
+  //   // Serial.println(mqttClient.connected());
+  //   if(!force && WiFi.isConnected() && mqttClient.connected())
+  //   {
+  //     Serial.println(F("WiFi & MQTT reconnected. Exit portal."));
+  //     break;
+  //   } 
+
+  //   yield();
+  // }
+
+  // server.stop();
+  // return WiFi.status() == WL_CONNECTED;
+}
+
+// void myWifi::timerCallback(Timer* timer)
+// {
+//   int action = timer->getAction();
+
+//   Serial.print("Timer: ");
+//   Serial.println(action);
+
+//   switch(action)
+//   {
+//     case ACT_TICK:
+//     {
+//       if(pollPortal(false)) myWifi::pStensTimer->deleteTimer(timer);
+//       break;
+//     }
+//   }
+// }
+
+bool myWifi::pollPortal(bool force)
+{
+  // Serial.println("pollPortal. handleClient.");
+  server.handleClient();
+
+  if (!portalOn) 
   {
-    server.handleClient();
-    if (!portalOn) 
+    delay(1000); // leave enough time for handlePortal server.send() to complete.
+
+    Serial.println(F("Configuration portal completed."));
+    // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
+    Serial.println(F("Close AP."));
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
+    if(!WiFi.isConnected())
     {
-      delay(1000); // leave enough time for handlePortal server.send() to complete.
-      Serial.println("Configure completed. Start connecting WiFi...");
-      WiFi.mode(WIFI_STA);
+      Serial.println(F("Reconnect WiFi..."));
       WiFi.begin(settings.ssid, settings.pass);
-      break;
     }
-    yield();
+    
+    server.stop();
+    return true;
   }
 
-  server.stop();
-  return WiFi.status() == WL_CONNECTED;
+  // return if WiFi is connected and mqtt is connected
+  // this can happen when wifi is still reconnect periodically while the portal is on
+  // Serial.print("WiFi status:");
+  // Serial.println(WiFi.isConnected());
+  // Serial.print("MQTT status:");
+  // Serial.println(mqttClient.connected());
+  if(!force && WiFi.isConnected() && mqttClient.connected())
+  {
+    Serial.println(F("WiFi & MQTT reconnected. Exit portal."));
+    
+    server.stop();
+
+    portalOn = false;
+    return true;
+  }
+
+  return false;
+    
+  // portalTimer.once(1, pollPortal, force);
 }
 
 void myWifi::handlePortal()
@@ -155,6 +280,8 @@ void myWifi::handlePortal()
   }
 }
 
+// use CRC to check EEPROM data
+// https://community.particle.io/t/determine-empty-location-with-eeprom-get-function/18869/12
 void myWifi::getSettings()
 {
   EEPROM.begin(sizeof(struct Settings));
