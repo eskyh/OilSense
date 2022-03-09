@@ -148,12 +148,12 @@ void myWifi::startConfigPortal(bool force) //char const *apName, char const *apP
   Serial.println(F("Connect AP Wifi and access the IP from Browser for configuration."));
 }
 
-// // A loop to enable the server process client request and will invoke the
-// // callback function handlePortal set above. The loop will be running untill
-// // the connect is set to true within handlePortal when configuration is done.
-// //---------------------------------------------------------------------------
-// // Stop condition: 1) Configuration form submitted
-// //                 2) Portal non-force open, WiFi and MQTT are reconnected
+// A loop to enable the server process client request and will invoke the
+// callback function handlePortal set above. The loop will be running untill
+// the connect is set to true within handlePortal when configuration is done.
+//---------------------------------------------------------------------------
+// Stop condition: 1) Configuration form submitted
+//                 2) Portal non-force open, WiFi and MQTT are reconnected
 void myWifi::pollPortal()
 {
   if(!portalOn) return;
@@ -272,11 +272,6 @@ void myWifi::subscribeMqtt()
    // subscribe command topics
    mqttClient.subscribe(_cmdTopic, 2);
 }
-
-// void myWifi::OnCommand(const char* cmdTopic, CommandHandler cmdHandler)
-// {
-
-// }
 
 void myWifi::setUpMQTT()
 {

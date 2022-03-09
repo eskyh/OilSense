@@ -26,16 +26,10 @@ SR04 sr04("SR04", D1, D2); // name, pinTrig, pinEcho
 #include "dht11.hpp"
 DH11 dh11("DH11", D5); // name, pinData
 
-void syncTime()
-{
-  configTime(TZ_America_New_York, "pool.ntp.org"); // daytime saying will be adjusted by SDK automatically.
-}
-
 //--------------------------------------------------
 // This function is called when a timer has passed
 #define ACT_TICK      1
 #define ACT_SENSOR    2
-#define ACT_TIME_SYNC 3
 
 /* stensTimer variable to be used later in the code */
 StensTimer* pStensTimer = NULL;
@@ -47,6 +41,10 @@ bool doMeasure = false;
 bool ssr_sr04 = true;
 // bool ssr_vl53 = true;
 bool ssr_dh11 = true;
+
+bool flagOpenCfgPortal = false;
+bool flagForceOpen = false;
+// char reason[50]; // reason to open portal
 
 void measure()
 {
@@ -64,14 +62,18 @@ void cmdHandler(const char* topic, const char* payload)
     Serial.println(payload);
   #endif
 
-  if(strcmp(topic, CMD_SSR_FILTER) == 0)
+  if(strcmp(topic, CMD_OPEN_PORTAL) == 0 || // send by MQTT
+     strcmp(topic, "cmdOpenPortal") == 0)   // send by wifi.cpp
+  {
+    flagOpenCfgPortal = true;
+    if(payload != NULL && strcmp(payload, "true") == 0) flagForceOpen = true;
+  }else if(strcmp(topic, CMD_SSR_FILTER) == 0)
   {
     int filter = atoi(payload);
     sr04.setFilter(filter);
 //    vl53.setFilter(filter);
     dh11.setFilter(filter);
-  }
-  if(strcmp(topic, CMD_LED_BLINK) == 0)
+  }else if(strcmp(topic, CMD_LED_BLINK) == 0)
   {
     if(strcmp(payload, "true") == 0) ledBlink = true;
     else ledBlink = false;
@@ -217,17 +219,14 @@ void setup() {
   
   Serial.begin(115200);      // Serial Communication baudrate: 9600, 115200, 250000
 
-  myWifi::setupWifiListener();
-  myWifi::autoConnect();
+  // setup callback function and MQTT command topics
+  myWifi::autoConnect(cmdHandler, MQTT_SUB_CMD);
 
   // Set sensor mqtt parameters
   sr04.setMqtt(&(myWifi::mqttClient), MQTT_PUB_SR04, 0, false);
 //  vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
-  // setup callback function for command topics
-  myWifi::OnCommand(MQTT_SUB_CMD, cmdHandler); // setup command callback function
-
   // Save instance of StensTimer to the tensTimer variable
   pStensTimer = StensTimer::getInstance(); // Tell StensTimer which callback function to use
   pStensTimer->setStaticCallback(timerCallback);
@@ -246,4 +245,14 @@ void loop() {
 
   // Give processing time for ArduinoOTA
   ArduinoOTA.handle();
+
+  if(flagOpenCfgPortal)
+  {
+    myWifi::startConfigPortal(flagForceOpen);
+    flagOpenCfgPortal = false;
+    flagForceOpen = false;
+  }
+
+  // check if need to handle portal stuff, e.g. web services
+  myWifi::pollPortal();
 }

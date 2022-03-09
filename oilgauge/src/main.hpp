@@ -2,22 +2,11 @@
 
 #include <Arduino.h>
 
-//--------------------------------------------------
-// #define OTA_HOSTNAME "espOilGauge"
-// #define OTA_PASSWORD "Hcjmosaic@66"
-
-//--------------------------------------------------
-// Raspberri Pi Mosquitto MQTT Broker
-// #define MQTT_HOST IPAddress(192, 168, 0, 194)
-// For a cloud MQTT broker, type the domain name
-// #define MQTT_HOST "raspberrypi.local" //Does not work: "esky.tplinkdns.com"
-// #define MQTT_PORT 1883
-// #define MQTT_USER "cjjiot"
-// #define MQTT_PASS "Hcjmosaic@66"
-
 #define PRJNAME "oilgauge"
 
 #define MQTT_SUB_CMD 	PRJNAME"/cmd/#"
+
+#define CMD_OPEN_PORTAL PRJNAME"/cmd/portal"        // this is not sent from MQTT, instead sent from wifi module when there is connection issues!!
 
 #define CMD_SLEEP       PRJNAME"/cmd/sleep"
 #define CMD_LED_BLINK   PRJNAME"/cmd/ledblink"
