@@ -41,7 +41,7 @@ bool ssr_sr04 = true;
 bool ssr_vl53 = true;
 bool ssr_dh11 = true;
 
-bool openCfgPortal = false;
+bool flagOpenCfgPortal = false;
 // char reason[50]; // reason to open portal
 
 void measure()
@@ -62,7 +62,7 @@ void cmdHandler(const char* topic, const char* payload)
 
   if(strcmp(topic, CMD_OPEN_PORTAL) == 0)
   {
-    openCfgPortal = true;
+    flagOpenCfgPortal = true;
   }else if(strcmp(topic, CMD_SSR_FILTER) == 0)
   {
     int filter = atoi(payload);
@@ -221,9 +221,9 @@ void loop() {
   // Give processing time for ArduinoOTA
   ArduinoOTA.handle();
 
-  if(openCfgPortal)
+  if(flagOpenCfgPortal)
   {
     myWifi::startConfigPortal();
-    openCfgPortal = false;
+    flagOpenCfgPortal = false;
   }
 }

@@ -18,26 +18,23 @@
 #include <AsyncMqttClient.h>
 // #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
-// https://gitlab.com/arduino-libraries/stens-timer
-#include <StensTimer.h>
-
 #define NTP_MIN_VALID_EPOCH 1640995200  // 1/2/2022. Use https://www.epochconverter.com/
 
 #define ACT_NETWORK   3
 
 struct Settings {
     //Wifi ssid and pass
-    char ssid[20];
+    char ssid[25];
     char pass[15];
 
     // MQTT host name and port
-    char mqttHost[20];
+    char mqttHost[25];
     int mqttPort = 1883;
     char mqttUser[20];
     char mqttPass[15];
 
     // OTA host name and pass
-    char otaHost[20];
+    char otaHost[25];
     char otaPass[15];
 };
 
@@ -51,12 +48,13 @@ class myWifi
     // static void setOTACredential(const char* otaHostName, const char* otaPassword);
     // static void setMqttCredential(const char* mqttHost, const char* user, const char* pass); //, int mqttPort);
     inline static bool portalOn = false; // indicate if configuration portal is on
+    inline static bool forcePortal = false; // indicate if force turn on portal anyway no matter network is connected or not
     inline static char portalReason[50]; // reason of open portal
     inline static ESP8266WebServer server = ESP8266WebServer(80);
 
     static void setupWifiListener();
     static void connect();
-    static void autoConnect();
+    static void autoConnect(CommandHandler cmdHandler, const char* cmdTopic);
     static void handlePortal();
     static void startConfigPortal(bool force=false); //char const *apName, char const *apPassword);
 
@@ -69,15 +67,12 @@ class myWifi
 
     static void setUpOTA();
 
-    static void OnCommand(const char* cmdTopic, CommandHandler cmdHandler);
+    // static void OnCommand(const char* cmdTopic, CommandHandler cmdHandler);
 
     // static member has to be defined with inline here or in .cpp
     inline static AsyncMqttClient mqttClient;
 
-
-    // inline static StensTimer* pStensTimer = NULL;
-    // static void timerCallback(Timer* timer);
-    static bool pollPortal(bool force);
+    static void pollPortal();
 
     // settings
     static void getSettings();
@@ -85,17 +80,10 @@ class myWifi
     inline static Settings settings;
 
   protected:
-    // inline static WiFiManager _wifiManager;
-    // inline static char _apName[20];
-
     // https://stackoverflow.com/questions/9110487/undefined-reference-to-a-static-member
     inline static Ticker wifiReconnectTimer;
     inline static Ticker mqttReconnectTimer;
     inline static Ticker mqttsubscribeTimer;
-
-    inline static Ticker portalTimer;
-
-    
 
     inline static WiFiEventHandler wifiConnectHandler;
     inline static WiFiEventHandler wifiDisconnectHandler;

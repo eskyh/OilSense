@@ -31,22 +31,24 @@ void myWifi::setupWifiListener()
 {
   // The next two lines create handlers that will allow both the MQTT broker and Wi-Fi connection
   // to reconnect, in case the connection is lost.
-  wifiConnectHandler = WiFi.onStationModeGotIP([] (const WiFiEventStationModeGotIP& event) {
-    Serial.print(F("Connected to Wi-Fi. IP: "));
-    Serial.println(WiFi.localIP().toString().c_str());
-    syncTimeNTP();
-    setUpMQTT();
-    connectToMqtt(); //or mqttReconnectTimer.once(1, connectToMqtt);
-    setUpOTA();
-  });
-
-  wifiDisconnectHandler = WiFi.onStationModeDisconnected([] (const WiFiEventStationModeDisconnected& event)
-    {
-      Serial.println(F("Disconnected from Wi-Fi."));
-      // mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-      // if(!portalOn) wifiReconnectTimer.once(2, autoConnect);
-      wifiReconnectTimer.once(2, connect);
+  if(wifiConnectHandler == nullptr)
+    wifiConnectHandler = WiFi.onStationModeGotIP([] (const WiFiEventStationModeGotIP& event) {
+      Serial.print(F("Connected to Wi-Fi. IP: "));
+      Serial.println(WiFi.localIP().toString().c_str());
+      syncTimeNTP();
+      setUpMQTT();
+      connectToMqtt(); //or mqttReconnectTimer.once(1, connectToMqtt);
+      setUpOTA();
     });
+
+  if(wifiDisconnectHandler == nullptr)
+    wifiDisconnectHandler = WiFi.onStationModeDisconnected([] (const WiFiEventStationModeDisconnected& event)
+      {
+        Serial.println(F("Disconnected from Wi-Fi."));
+        // mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+        // if(!portalOn) wifiReconnectTimer.once(2, autoConnect);
+        wifiReconnectTimer.once(2, connect);
+      });
 }
 
 void myWifi::connect()
@@ -60,14 +62,15 @@ void myWifi::connect()
   WiFi.begin(settings.ssid, settings.pass);
 }
 
-void myWifi::autoConnect()
+void myWifi::autoConnect(CommandHandler cmdHandler, const char* cmdTopic)
 {
-  // if(myWifi::pStensTimer == NULL)
-  // {
-  //   Serial.println("Set StensTimer.");
-  //   pStensTimer = StensTimer::getInstance();
-  //   // pStensTimer->setStaticCallback(myWifi::timerCallback);
-  // }
+  // set up cmdHandler and cmdTopic
+  // do this before anything else, as turn on portal cmd will be send to cmdHandler if there is connection issue
+  _cmdHandler = cmdHandler;
+  strncpy(_cmdTopic, cmdTopic, sizeof(_cmdTopic));
+  
+  // set up wifi listener if needed
+  setupWifiListener();
 
   // read settings from EEPROM
   getSettings();
@@ -112,7 +115,8 @@ void myWifi::startConfigPortal(bool force) //char const *apName, char const *apP
    Serial.println(force);
 
   // connect will be set to true when the configuration is done in handlePortal
-  portalOn = true;
+  portalOn = true;   // this will enable the pollPortal call in the loop of main.cpp
+  forcePortal = force;
 
   // if(!WiFi.isConnected()){
   //   WiFi.persistent(false);
@@ -142,120 +146,49 @@ void myWifi::startConfigPortal(bool force) //char const *apName, char const *apP
   Serial.print(F(", IP:"));
   Serial.println(WiFi.softAPIP());
   Serial.println(F("Connect AP Wifi and access the IP from Browser for configuration."));
-
-  // Timer *timer = pStensTimer->setInterval(ACT_NETWORK, 1e3);
-  // Serial.print("Timer: ");
-  // Serial.println(timer!=NULL);
-  
-  
-  // pollPortal(force);
-
-  // // A loop to enable the server process client request and will invoke the
-  // // callback function handlePortal set above. The loop will be running untill
-  // // the connect is set to true within handlePortal when configuration is done.
-  // //---------------------------------------------------------------------------
-  // // Stop condition: 1) Configuration form submitted
-  // //                 2) Portal non-force open, WiFi and MQTT are reconnected
-  // while(true)
-  // {
-  //   server.handleClient();
-
-  //   if (!portalOn) 
-  //   {
-  //     delay(1000); // leave enough time for handlePortal server.send() to complete.
-
-  //     Serial.println(F("Configuration portal completed."));
-  //     // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
-  //     Serial.println(F("Close AP."));
-  //     WiFi.softAPdisconnect(true);
-  //     WiFi.mode(WIFI_STA);
-  //     if(!WiFi.isConnected())
-  //     {
-  //       Serial.println(F("Reconnect WiFi..."));
-  //       WiFi.begin(settings.ssid, settings.pass);
-  //     }
-  //     break;
-  //   }
-
-  //   // return if WiFi is connected and mqtt is connected
-  //   // this can happen when wifi is still reconnect periodically while the portal is on
-  //   // Serial.print("WiFi status:");
-  //   // Serial.println(WiFi.isConnected());
-  //   // Serial.print("MQTT status:");
-  //   // Serial.println(mqttClient.connected());
-  //   if(!force && WiFi.isConnected() && mqttClient.connected())
-  //   {
-  //     Serial.println(F("WiFi & MQTT reconnected. Exit portal."));
-  //     break;
-  //   } 
-
-  //   yield();
-  // }
-
-  // server.stop();
-  // return WiFi.status() == WL_CONNECTED;
 }
 
-// void myWifi::timerCallback(Timer* timer)
-// {
-//   int action = timer->getAction();
-
-//   Serial.print("Timer: ");
-//   Serial.println(action);
-
-//   switch(action)
-//   {
-//     case ACT_TICK:
-//     {
-//       if(pollPortal(false)) myWifi::pStensTimer->deleteTimer(timer);
-//       break;
-//     }
-//   }
-// }
-
-bool myWifi::pollPortal(bool force)
+// // A loop to enable the server process client request and will invoke the
+// // callback function handlePortal set above. The loop will be running untill
+// // the connect is set to true within handlePortal when configuration is done.
+// //---------------------------------------------------------------------------
+// // Stop condition: 1) Configuration form submitted
+// //                 2) Portal non-force open, WiFi and MQTT are reconnected
+void myWifi::pollPortal()
 {
-  // Serial.println("pollPortal. handleClient.");
+  if(!portalOn) return;
+
+  // handle config portal form POST. When it is done, set portalOn false.
   server.handleClient();
 
-  if (!portalOn) 
+  if (!portalOn) // Form submitted and handled by server
   {
-    delay(1000); // leave enough time for handlePortal server.send() to complete.
-
+    // delay(2000); // leave enough time for handlePortal server.send() to complete before closing softAP mode.
     Serial.println(F("Configuration portal completed."));
+
     // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
     Serial.println(F("Close AP."));
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_STA);
-    if(!WiFi.isConnected())
-    {
-      Serial.println(F("Reconnect WiFi..."));
-      WiFi.begin(settings.ssid, settings.pass);
-    }
+
+    // reconnect WiFi if needed
+    if(!WiFi.isConnected())  WiFi.begin(settings.ssid, settings.pass);
+
+    // reconnect MQTT broker if needed
+    if(!mqttClient.connected()) connectToMqtt();
     
     server.stop();
-    return true;
+    return;
   }
 
   // return if WiFi is connected and mqtt is connected
   // this can happen when wifi is still reconnect periodically while the portal is on
-  // Serial.print("WiFi status:");
-  // Serial.println(WiFi.isConnected());
-  // Serial.print("MQTT status:");
-  // Serial.println(mqttClient.connected());
-  if(!force && WiFi.isConnected() && mqttClient.connected())
+  if(!forcePortal && WiFi.isConnected() && mqttClient.connected())
   {
     Serial.println(F("WiFi & MQTT reconnected. Exit portal."));
-    
     server.stop();
-
     portalOn = false;
-    return true;
   }
-
-  return false;
-    
-  // portalTimer.once(1, pollPortal, force);
 }
 
 void myWifi::handlePortal()
@@ -276,7 +209,14 @@ void myWifi::handlePortal()
     server.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title><style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1,p{text-align: center}</style> </head> <body><main class='form-signin'> <h1>Success!</h1> <br/> <p>Your settings have been saved successfully!<br />Device is starting...</p></main></body></html>");
     portalOn = false; // to turn off portal
   } else {
-    server.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color:red;'>" + String(portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' type='pass' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttHost' type='text' value='raspberrypi.local' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='1883' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' type='pass' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='otaHost' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' type='pass' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
+    // blank
+    //server.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color:red;'>" + String(portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' type='pass' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttHost' type='text' value='raspberrypi.local' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='1883' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' type='pass' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='otaHost' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' type='pass' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
+    
+    // with password mode
+    //server.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color: red;'>" + String(portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='" + String(settings.ssid) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' type='password' value='" + String(settings.pass) + "' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttHost' type='text' value='" + String(settings.mqttHost) + "' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='" + String(settings.mqttPort) + "' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='" + String(settings.mqttUser) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' type='password' value='" + String(settings.mqttPass) + "' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='otaHost' type='text' value='" + String(settings.otaHost) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' type='password' value='" + String(settings.otaPass) + "' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
+
+    // non-password mode
+    server.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color: red;'>" + String(portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='" + String(settings.ssid) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' value='" + String(settings.pass) + "' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttHost' type='text' value='" + String(settings.mqttHost) + "' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='" + String(settings.mqttPort) + "' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='" + String(settings.mqttUser) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' value='" + String(settings.mqttPass) + "' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='otaHost' type='text' value='" + String(settings.otaHost) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' value='" + String(settings.otaPass) + "' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
   }
 }
 
@@ -333,11 +273,10 @@ void myWifi::subscribeMqtt()
    mqttClient.subscribe(_cmdTopic, 2);
 }
 
-void myWifi::OnCommand(const char* cmdTopic, CommandHandler cmdHandler)
-{
-  strncpy(_cmdTopic, cmdTopic, sizeof(_cmdTopic));
-  _cmdHandler = cmdHandler;
-}
+// void myWifi::OnCommand(const char* cmdTopic, CommandHandler cmdHandler)
+// {
+
+// }
 
 void myWifi::setUpMQTT()
 {
