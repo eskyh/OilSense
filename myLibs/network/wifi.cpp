@@ -163,7 +163,7 @@ void myWifi::pollPortal()
 
   if (!portalOn) // Form submitted and handled by server
   {
-    // delay(2000); // leave enough time for handlePortal server.send() to complete before closing softAP mode.
+    delay(1000); // leave enough time for handlePortal server.send() to complete before closing softAP mode.
     Serial.println(F("Configuration portal completed."));
 
     // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
@@ -193,8 +193,13 @@ void myWifi::pollPortal()
 
 void myWifi::handlePortal()
 {
-  if (server.method() == HTTP_POST) {
+  if (server.method() == HTTP_POST)
+  {
     Serial.println("POST received.");
+  
+    server.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title><style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1,p{text-align: center}</style> </head> <body><main class='form-signin'> <h1>Success!</h1> <br/> <p>Your settings have been saved successfully!<br />Device is starting...</p></main></body></html>");
+
+    // save configuration received    
     strncpy(settings.ssid, server.arg("ssid").c_str(), sizeof(settings.ssid));
     strncpy(settings.pass, server.arg("password").c_str(), sizeof(settings.pass));
 
@@ -206,7 +211,7 @@ void myWifi::handlePortal()
     strncpy(settings.otaPass, server.arg("otaPass").c_str(), sizeof(settings.otaPass));
 
     setSettings();
-    server.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title><style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1,p{text-align: center}</style> </head> <body><main class='form-signin'> <h1>Success!</h1> <br/> <p>Your settings have been saved successfully!<br />Device is starting...</p></main></body></html>");
+    
     portalOn = false; // to turn off portal
   } else {
     // blank
