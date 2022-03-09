@@ -20,7 +20,7 @@
 
 #define NTP_MIN_VALID_EPOCH 1640995200  // 1/2/2022. Use https://www.epochconverter.com/
 
-#define ACT_NETWORK   3
+#include <CRC32.h>
 
 struct Settings {
     //Wifi ssid and pass
@@ -36,6 +36,8 @@ struct Settings {
     // OTA host name and pass
     char otaHost[25];
     char otaPass[15];
+
+    uint32_t CRC = 0;
 };
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
@@ -75,7 +77,7 @@ class myWifi
     static void pollPortal();
 
     // settings
-    static void getSettings();
+    static bool getSettings();
     static void setSettings();
     inline static Settings settings;
 

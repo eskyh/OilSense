@@ -72,35 +72,39 @@ void myWifi::autoConnect(CommandHandler cmdHandler, const char* cmdTopic)
   // set up wifi listener if needed
   setupWifiListener();
 
-  // read settings from EEPROM
-  getSettings();
+  // read settings from EEPROM. CRC is checked to see if the saved data are valid
+  if(getSettings())
+  {
+    Serial.println(F("Connecting WiFi..."));
+    // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(settings.ssid, settings.pass);
+    //uncomment below to trigger startConfigPortal
+    // WiFi.disconnect(true);
 
-  Serial.println(F("Connecting WiFi..."));
-  // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(settings.ssid, settings.pass);
-  //uncomment below to trigger startConfigPortal
-  // WiFi.disconnect(true);
+    byte tries = 0;
+    while (WiFi.status() != WL_CONNECTED) {
+      if (tries++ > 10) {
+        #ifdef _DEBUG
+          Serial.println(F("Can not connect WiFi. Start portal..."));
+        #endif
 
-  byte tries = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    if (tries++ > 10) {
-      #ifdef _DEBUG
-        Serial.println(F("Can not connect WiFi. Start portal..."));
-      #endif
-
-      // this inform the main loop to open portal! (Can not handle it in the event handler or timer)
-      if(_cmdHandler!= NULL)
-      {
-        _cmdHandler("cmdOpenPortal", NULL);
-        strncpy(portalReason, "Wifi connect failure!", sizeof(portalReason));      
-      }else
-      {
-        Serial.println(F("cmdHandler is not set!"));
+        // this inform the main loop to open portal! (Can not handle it in the event handler or timer)
+        if(_cmdHandler!= NULL)
+        {
+          _cmdHandler("cmdOpenPortal", NULL);
+          strncpy(portalReason, "Wifi connect failure!", sizeof(portalReason));      
+        }else
+        {
+          Serial.println(F("cmdHandler is not set!"));
+        }
+        break;
       }
-      break;
+      delay(1000);
     }
-    delay(1000);
+  }else
+  {
+    startConfigPortal(false);
   }
 
   if(WiFi.isConnected()) waitSyncNTP();
@@ -227,26 +231,39 @@ void myWifi::handlePortal()
 
 // use CRC to check EEPROM data
 // https://community.particle.io/t/determine-empty-location-with-eeprom-get-function/18869/12
-void myWifi::getSettings()
+bool myWifi::getSettings()
 {
   EEPROM.begin(sizeof(struct Settings));
   EEPROM.get(0, settings);
 
+  uint32_t checksum = CRC32::calculate((uint8_t *)&settings, sizeof(settings)-sizeof(settings.CRC));
+
   #ifdef _DEBUG
-    Serial.println("Read from EEPROM:");
-    Serial.println(settings.ssid);
-    Serial.println(settings.pass);
-    Serial.println(settings.mqttHost);
-    Serial.println(settings.mqttPort);
-    Serial.println(settings.mqttUser);
-    Serial.println(settings.mqttPass);
-    Serial.println(settings.otaHost);
-    Serial.println(settings.otaPass);
+    bool crcMatched = settings.CRC == checksum;
+    if(crcMatched)
+    {
+      Serial.println("Read from EEPROM:");
+      Serial.println(settings.ssid);
+      Serial.println(settings.pass);
+      Serial.println(settings.mqttHost);
+      Serial.println(settings.mqttPort);
+      Serial.println(settings.mqttUser);
+      Serial.println(settings.mqttPass);
+      Serial.println(settings.otaHost);
+      Serial.println(settings.otaPass);
+    }
+
+    Serial.print("CRC matched: ");
+    Serial.println(crcMatched);
   #endif
+
+  return settings.CRC == checksum;
 }
 
 void myWifi::setSettings()
 {
+  settings.CRC = CRC32::calculate((uint8_t *)&settings, sizeof(settings)-sizeof(settings.CRC));
+
   #ifdef _DEBUG
     Serial.println("Set EEPROM:");
     Serial.println(settings.ssid);
@@ -257,8 +274,11 @@ void myWifi::setSettings()
     Serial.println(settings.mqttPass);
     Serial.println(settings.otaHost);
     Serial.println(settings.otaPass);
+
+    Serial.print("CRC: ");
+    Serial.println(settings.CRC);
   #endif
-    
+  
   // EEPROM.begin(sizeof(struct settings));
   EEPROM.put(0, settings);
   EEPROM.commit();
