@@ -45,56 +45,56 @@ typedef std::function<void(const char* topic, const char* payload)> CommandHandl
 class myWifi
 {
   public:
-    //------------------------------------
-    // Wifi portal
-    // static void setOTACredential(const char* otaHostName, const char* otaPassword);
-    // static void setMqttCredential(const char* mqttHost, const char* user, const char* pass); //, int mqttPort);
-    inline static bool portalOn = false; // indicate if configuration portal is on
-    inline static bool forcePortal = false; // indicate if force turn on portal anyway no matter network is connected or not
-    inline static char portalReason[50]; // reason of open portal
-    inline static ESP8266WebServer server = ESP8266WebServer(80);
+    // static member has to be defined with inline keyword
+    inline static AsyncMqttClient mqttClient;
 
-    static void setupWifiListener();
-    static void connect();
     static void autoConnect(CommandHandler cmdHandler, const char* cmdTopic);
-    static void handlePortal();
     static void startConfigPortal(bool force=false); //char const *apName, char const *apPassword);
+    static void pollPortal();
 
+  protected:
+    // settings
+    inline static Settings settings;
+    static bool getSettings();
+    static void setSettings();
+
+    static void setUpMQTT();
+    static void setUpOTA();
+    
+    // sync NTP time
     static void syncTimeNTP();
     static void waitSyncNTP();
 
-    static void setUpMQTT();
-    static void connectToMqtt();
-    static void subscribeMqtt();
-
-    static void setUpOTA();
-
-    // static void OnCommand(const char* cmdTopic, CommandHandler cmdHandler);
-
-    // static member has to be defined with inline here or in .cpp
-    inline static AsyncMqttClient mqttClient;
-
-    static void pollPortal();
-
-    // settings
-    static bool getSettings();
-    static void setSettings();
-    inline static Settings settings;
-
-  protected:
     // https://stackoverflow.com/questions/9110487/undefined-reference-to-a-static-member
+    // timer used to reconnect when disconnection happend
     inline static Ticker wifiReconnectTimer;
     inline static Ticker mqttReconnectTimer;
     inline static Ticker mqttsubscribeTimer;
 
-    inline static WiFiEventHandler wifiConnectHandler;
-    inline static WiFiEventHandler wifiDisconnectHandler;
-
-    inline static CommandHandler _cmdHandler;
-    inline static char _cmdTopic[20];
-
   private:
-    inline static byte _nMqttReconnect = 0;
+    inline static CommandHandler _cmdHandler;     // command handler function for command from either wifi module or mqtt command
+    inline static char _cmdTopic[20];             // save the mqtt command topic set by autoConnect()
+    inline static byte _nMqttReconnect = 0;       // count number of MQTT connect try before ask for turn on portal
+    inline static unsigned long _timeStartPortal; // start time of forced portal (2 min time out check)
+
+    // only used to mark if the wifi event listener is set (nullptr by default)
+    inline static WiFiEventHandler _wifiConnectHandler;
+    inline static WiFiEventHandler _wifiDisconnectHandler;
+
+    // used to subscribe mqtt command topic
+    static void _subscribeMqttCommand();
+
+    // Wifi portal
+    inline static bool _portalOn = false;    // indicate if configuration portal is on
+    inline static bool _forcePortal = false; // indicate if force turn on portal anyway no matter network is connected or not
+    inline static char _portalReason[50];    // reason of open portal
+    inline static ESP8266WebServer _webServer = ESP8266WebServer(80); // portal web server
+
+    static void _handlePortal();
+
+    static void _setupWifiListener();
+    static void _connectToWifi();
+    static void _connectToMqtt();
 
     // Disallow creating an instance of this object by putting constructor in private
     myWifi() {};
