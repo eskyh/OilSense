@@ -14,11 +14,11 @@
 //     using D4 will impact the built in LED
 // ----------------------------------------------------
 #include "sr04.hpp"
-SR04 sr04("SR04", D6, D6); // name, pinTrig, pinEcho
+SR04 sr04("SR04", D1, D2); // name, pinTrig, pinEcho
 
 //-- Sensor VL53L0X
 #include "vl53l0x.hpp"
-VL53L0X vl53("VL53"); // name. D1(SCL) and D2(SDA) has to be used
+// VL53L0X vl53("VL53"); // name. D1(SCL) and D2(SDA) has to be used
 
 //-- Sensor DHT11
 #include <Wire.h>
@@ -48,7 +48,7 @@ bool flagForceOpen = false;
 void measure()
 {
  if(ssr_sr04) sr04.sendMeasure();
- if(ssr_vl53) vl53.sendMeasure();
+//  if(ssr_vl53) vl53.sendMeasure();
  if(ssr_dh11) dh11.sendMeasure();
 }
 
@@ -70,7 +70,7 @@ void cmdHandler(const char* topic, const char* payload)
   {
     int filter = atoi(payload);
     sr04.setFilter(filter);
-    vl53.setFilter(filter);
+    // vl53.setFilter(filter);
     dh11.setFilter(filter);
   }else if(strcmp(topic, CMD_LED_BLINK) == 0)
   {
@@ -198,7 +198,7 @@ void setup() {
 
   // Set sensor mqtt parameters
   sr04.setMqtt(&(myWifi::mqttClient), MQTT_PUB_SR04, 0, false);
-  vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
+  // vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
   // Save instance of StensTimer to the tensTimer variable
