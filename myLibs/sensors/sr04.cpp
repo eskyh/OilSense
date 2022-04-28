@@ -13,8 +13,12 @@ char* SR04::getPayload()
 	static char payload[50];
   // According to the C standard, unless the buffer size is 0, vsnprintf() and
   // snprintf() null terminates its output. No need to add \0 in its format
-  snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"distance\":%.1f}",
-    _timestamp*1000, _measures[0]);
+  // snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"distance\":%.1f}",
+  //   _timestamp*1000, _measures[0]);
+
+  snprintf(payload, sizeof(payload), "{\"distance\":%.1f}",
+    _measures[0]);
+
 	return payload;
 }
 

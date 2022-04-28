@@ -11,12 +11,16 @@ DH11::DH11(const char* name, uint8_t dhtPin)
 char* DH11::getPayload()
 {
 	static char payload[100];
-	snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f,\"heatindex\":%.1f}",
-		_timestamp*1000,
+	// snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f,\"heatindex\":%.1f}",
+	// 	_timestamp*1000,
+	// 	_measures[0],
+	// 	_measures[1],
+	// 	_measures[4]);
+	snprintf(payload, sizeof(payload), "{\"humidity\":%.1f,\"temperature\":%.1f,\"heatindex\":%.1f}",
 		_measures[0],
 		_measures[1],
-		_measures[4]);
-	return payload;
+		_measures[4]);	
+  return payload;
 }
 
 // Measure distance in mm

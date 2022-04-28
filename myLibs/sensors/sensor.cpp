@@ -57,7 +57,7 @@ void Sensor::sendMeasure()
   }
   
   // format the payload. Avoid using String!!
-  _timestamp = time(NULL); // get current timestamp (in sec), convert it to millisec below
+  // _timestamp = time(NULL); // get current timestamp (in sec), convert it to millisec below
   
   // Accuracy only to 1mm. so output to 1 decimal place.
 	if(!measure())

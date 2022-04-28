@@ -9,7 +9,7 @@
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
   #include <ESP8266WebServer.h>
-  #include <TZ.h>
+  // #include <TZ.h>
   // <time.h> and <WiFiUdp.h> not needed. already included by core.         
 #endif
 
@@ -24,20 +24,37 @@
 
 struct Settings {
     //Wifi ssid and pass
-    char ssid[25];
-    char pass[15];
+    char ssid[25] = "";
+    char pass[15] = "";
+    char ip[16] = "";
 
     // MQTT host name and port
-    char mqttHost[25];
+    char mqttHost[25] = "";
     int mqttPort = 1883;
-    char mqttUser[20];
-    char mqttPass[15];
+    char mqttUser[20] = "";
+    char mqttPass[15] = "";
 
     // OTA host name and pass
-    char otaHost[25];
-    char otaPass[15];
+    char otaHost[25] = "";
+    char otaPass[15] = "";
 
     uint32_t CRC = 0;
+
+    void reset()
+    {
+      ssid[0] = '\0';
+      pass[0] = '\0';
+      ip[0] = '\0';
+
+      mqttHost[0] = '\0';
+      mqttPort = 1883;
+      mqttUser[0] = '\0';
+      mqttPass[0] = '\0';
+      
+      otaHost[0] = '\0';
+      otaPass[0] = '\0';
+      CRC = 0;
+    }
 };
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
@@ -49,7 +66,9 @@ class myWifi
     inline static AsyncMqttClient mqttClient;
 
     static void autoConnect(CommandHandler cmdHandler, const char* cmdTopic);
+    static void sendCmdOpenPortal(const char* reason);
     static void startConfigPortal(bool force=false); //char const *apName, char const *apPassword);
+    static void closeConfigPortal();
     static void pollPortal();
 
   protected:
@@ -62,8 +81,8 @@ class myWifi
     static void setUpOTA();
     
     // sync NTP time
-    static void syncTimeNTP();
-    static void waitSyncNTP();
+    // static void syncTimeNTP();
+    // static void waitSyncNTP();
 
     // https://stackoverflow.com/questions/9110487/undefined-reference-to-a-static-member
     // timer used to reconnect when disconnection happend
@@ -85,9 +104,10 @@ class myWifi
     static void _subscribeMqttCommand();
 
     // Wifi portal
-    inline static bool _portalOn = false;    // indicate if configuration portal is on
-    inline static bool _forcePortal = false; // indicate if force turn on portal anyway no matter network is connected or not
-    inline static char _portalReason[50];    // reason of open portal
+    inline static bool _portalOn = false;         // indicate if configuration portal is on
+    inline static bool _portalSubmitted = false;  // The configuration form submitted
+    inline static bool _forcePortal = false;      // indicate if force turn on portal anyway no matter network is connected or not
+    inline static char _portalReason[50];         // reason of open portal
     inline static ESP8266WebServer _webServer = ESP8266WebServer(80); // portal web server
 
     static void _handlePortal();
