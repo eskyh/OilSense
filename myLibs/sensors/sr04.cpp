@@ -1,7 +1,7 @@
 #include "sr04.hpp"
 
 SR04::SR04(const char* name, int triggerPin, int echoPin)
-	 : Sensor(name, 1)
+	 : Sensor(name, 1, Median)
 {
   _triggerPin = triggerPin;
   _echoPin = echoPin;
@@ -16,8 +16,7 @@ char* SR04::getPayload()
   // snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"distance\":%.1f}",
   //   _timestamp*1000, _measures[0]);
 
-  snprintf(payload, sizeof(payload), "{\"distance\":%.1f}",
-    _measures[0]);
+  snprintf(payload, sizeof(payload), "{\"distance\":%.1f}", _measures[0]);
 
 	return payload;
 }
@@ -57,7 +56,7 @@ bool SR04::_read()
 
   // Calculating the distance
   soundSpeed = 331300 + 606 * airTemp; //  mm/s
-  _lastReadings[0][_index] = soundSpeed*duration/2e7; //cm // Speed of sound wave divided by 2 (go and back)
+  _measures[0] = soundSpeed*duration/2e7; //cm // Speed of sound wave divided by 2 (go and back)
   // Serial.println(_lastReadings[0][_index]);
   return true;
 }

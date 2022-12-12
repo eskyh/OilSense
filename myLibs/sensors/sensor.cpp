@@ -1,21 +1,71 @@
 // #define DEBUG
 
 #include "sensor.hpp"
+#include "filter.hpp"
 
-Sensor::Sensor(const char* name, int nMeasures)
+// name: sensor name
+// nMeasures: number of measures a sensor can generator (some sensor integrates multiple type of measures)
+Sensor::Sensor(const char* name, int nMeasures, FilterType filter)
 {
   // sizeof: Returns the length of the given byte string, include null terminator;
   // strlen: Returns the length of the given byte string not including null terminator;
   strncpy(_name, name, sizeof(_name));
 	_nMeasures = nMeasures;
-  _lastReadings = (float (*)[5]) calloc(nMeasures, sizeof(float[5]));
+
+  // init the filter pointer array
+	_filters = new Filter*[_nMeasures];
+	for (int i = 0; i < _nMeasures; i++)
+	{
+		_filters[i] = NULL;
+	}
+
+  setFilter(filter);
+
+  // init the measure array
 	_measures = (float *) calloc(nMeasures, sizeof(float));
 }
 
 Sensor::~Sensor()
 {
-  free(_lastReadings);
+	for (int i = 0; i < _nMeasures; i++)
+	{
+		if (_filters[i] != NULL) delete _filters[i];
+	}
+
 	free(_measures);
+}
+
+void Sensor::setFilter(FilterType type)
+{
+	for (int i = 0; i < _nMeasures; i++)
+	{
+		setFilter(i, type);
+	}
+}
+
+void Sensor::setFilter(int index, FilterType type)
+{
+	if (_filters[index] != NULL)
+	{
+		delete _filters[index];
+		_filters[index] = NULL;
+	}
+
+	switch (type)
+	{
+	case None:
+		_filters[index] = NULL;
+		break;
+	case Median:
+		_filters[index] = new MedianFilter();
+		break;
+	case Kalmen:
+		_filters[index] = new KalmenFilter();
+		break;
+	case EWMA:
+		_filters[index] = new EWMAFilter();
+		break;
+	}
 }
 
 // qos :
@@ -32,20 +82,6 @@ void Sensor::setMqtt(AsyncMqttClient *pClient, const char* topic, int qos, bool 
 
   _qos = qos;
   _retain = retain;
-}
-
-void Sensor::setFilter(int filter)
-{
-	if( filter != 0 &&
-			filter != 1 &&
-			filter != 2 &&
-			filter != 3 )
-	{
-		Serial.printf("Invalide filter: %d!\n", filter);
-		return;
-	}
-	
-  _filter = filter;
 }
 
 void Sensor::sendMeasure()
@@ -77,53 +113,14 @@ void Sensor::sendMeasure()
 // return measure in cm
 bool Sensor::measure() 
 {
-	_index++;
-	_index %= 5;
-	
-	for(int i=0; i<_nMeasures; i++)
-	{
-		if(!_read()) return false;
+  if(!_read()) return false;
 
-    switch(_filter)
-    {
-      case 0: // no filter results
-				#ifdef DEBUG
-					Serial.println(F("No filter."));
-				#endif
-        _measures[i] = _lastReadings[i][_index];
-        break;
-        
-      case 1: // Median filter results
-				#ifdef DEBUG
-					Serial.println(F("Median filter."));
-				#endif
-    		_measures[i] = _fMedian(
-    				_lastReadings[i][0],
-    				_lastReadings[i][1],
-    				_lastReadings[i][2],
-    				_lastReadings[i][3],
-    				_lastReadings[i][4]);
-        break;
-
-      case 2: // Kalmen filter results
-				#ifdef DEBUG
-					Serial.println(F("Kalmen filter."));
-				#endif
-        _measures[i] = _fKalman(_lastReadings[i][_index]);
-        break;
-        
-      case 3: // EWMA filter
-				#ifdef DEBUG
-					Serial.println(F("EWMA filter."));
-				#endif
-        _measures[i] = _fEwma(_lastReadings[i][_index]);
-        break;
-				
-			default:
-				Serial.println(F("Invalid filter!"));
-				return false;
-    }
-	}
+  for(int i=0; i<_nMeasures; i++)
+  {
+    // get filter value if filter is set
+    if(_filters[i] != NULL)
+      _measures[i] = _filters[i]->state(_measures[i]);
+  }
 
   return true;
 	
@@ -132,62 +129,4 @@ bool Sensor::measure()
 //    #endif
 //    
 //    return m;
-}
-
-// Trick using XOR to swap two variables
-//#define swap(a,b) a ^= b; b ^= a; a ^= b; // good for int only
-#define swap(a,b) a = a+b; b = a-b; a = a-b;
-#define sort(a,b) if(a>b){ swap(a,b); }
-
-// http://cs.engr.uky.edu/~lewis/essays/algorithms/sortnets/sort-net.html
-// Median could be computed two less steps...
-float Sensor::_fMedian(float a, float b, float c, float d, float e)
-{
-    sort(a,b);
-    sort(d,e);
-    sort(a,c);
-    sort(b,c);
-    sort(a,d);  
-    sort(c,d);
-    sort(b,e);
-    sort(b,c);
-    // this last one is obviously unnecessary for the median
-    //sort(d,e);
-  
-    return c;
-}
-
-float Sensor::_fEwma(double measure)
-{
-  static const double lambda = 0.5; // The smaller, the more weight put on the new data
-
-  if(_ewma == 0) _ewma = measure; // initial value
-  else _ewma = lambda*_ewma + (1-lambda)*measure;
-  return _ewma;
-}
-
-// https://github.com/rizkymille/ultrasonic-hc-sr04-kalman-filter/blob/master/hc-sr04_kalman_filter/hc-sr04_kalman_filter.ino
-// https://en.wikipedia.org/wiki/Kalman_filter
-// http://bilgin.esme.org/BitsAndBytes/KalmanFilterforDummies <= nice one!
-float Sensor::_fKalman(double Z)
-{
-//  static const double F = 1.0; // true state coeff
-//  static const couble B = 0.0; // there is no control input
-//  static const double H = 1.0; // measurement coeff
-
-//  static const double Q = 10;   // initial estimated covariance
-//  static const double R = 40.0; // noise covariance. The higher R, the less K
-
-//  static double K = 0;          // Kalmen gain, the higher K, the more weight to the new observation
-//  static double P = 0;          // initial error covariance (must be 0)
-//  static double X_hat = 0;      // initial estimated state (assume unknown)
-
-  if(X_hat == 0) X_hat = Z;  // initial estimated state set to the first measure
-  else
-  {
-    K = P*H/(H*P*H+R);      // Optimal Kalman gain
-    X_hat += K*(Z-H*X_hat); // Updated (a posteriori) state estimate. F=1.0, ignored
-    P = (1-K*H)*(P+Q);      // Updated (a posteriori) estimate covariance (F=1.0)
-  }
-  return X_hat;
 }

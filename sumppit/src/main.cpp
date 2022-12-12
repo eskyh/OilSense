@@ -69,9 +69,9 @@ void cmdHandler(const char* topic, const char* payload)
   }else if(strcmp(topic, CMD_SSR_FILTER) == 0)
   {
     int filter = atoi(payload);
-    sr04.setFilter(filter);
+    sr04.setFilter((FilterType)filter);
     // vl53.setFilter(filter);
-    dh11.setFilter(filter);
+    dh11.setFilter((FilterType)filter);
   }else if(strcmp(topic, CMD_LED_BLINK) == 0)
   {
     if(strcmp(payload, "true") == 0) ledBlink = true;

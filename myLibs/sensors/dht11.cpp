@@ -2,7 +2,7 @@
 
 // dhtPin: Digital pin connected to the DHT sensor
 DH11::DH11(const char* name, uint8_t dhtPin)
-	 : Sensor(name, 5), _dht(dhtPin, DHT11)
+	 : Sensor(name, 5, None), _dht(dhtPin, DHT11)
 {
   _dht.begin();
 }
@@ -52,10 +52,10 @@ bool DH11::_read()
   // Compute heat index in Celsius (isFahreheit = false)
   float hic = _dht.computeHeatIndex(t, h, false);
 	
-  _lastReadings[0][_index] = h;
-	_lastReadings[1][_index] = t;
-	_lastReadings[2][_index] = f;
-	_lastReadings[3][_index] = hif;
-	_lastReadings[4][_index] = hic;
+  _measures[0] = h;
+	_measures[1] = t;
+	_measures[2] = f;
+	_measures[3] = hif;
+	_measures[4] = hic;
 	return true;
 }
