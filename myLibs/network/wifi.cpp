@@ -83,34 +83,37 @@ void myWifi::autoConnect(CommandHandler cmdHandler, const char* cmdTopic)
   // do this before anything else, as turn on portal cmd will be send to cmdHandler if there is connection issue
   _cmdHandler = cmdHandler;
   strncpy(_cmdTopic, cmdTopic, sizeof(_cmdTopic));
-  
+
   // set up wifi listener if needed
   _setupWifiListener();
 
   // read settings from EEPROM. CRC is checked to see if the saved data are valid
   if(getSettings())
   {
+    // initialize module name
+    snprintf(module, sizeof(module), "ESP-%s-%d", settings.otaHost, ESP.getChipId()); // ChipId is unique for the hardware, while otahost can be configured
+
     _connectToWifi();
     //uncomment below to trigger startConfigPortal
     // WiFi.disconnect(true);
 
     #ifdef _DEBUG
-    Serial.print("MAC: ");
-    Serial.println(WiFi.macAddress());
+      Serial.print("MAC: ");
+      Serial.println(WiFi.macAddress());
 
-    Serial.println(F("WIFI_OFF = 0, WIFI_STA = 1, WIFI_AP = 2, WIFI_AP_STA = 3"));
-    Serial.print(F("WiFi mode: "));
-    Serial.println(WiFi.getMode());
-    Serial.println();
+      Serial.println(F("WIFI_OFF = 0, WIFI_STA = 1, WIFI_AP = 2, WIFI_AP_STA = 3"));
+      Serial.print(F("WiFi mode: "));
+      Serial.println(WiFi.getMode());
+      Serial.println();
 
-    // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
-    Serial.println(F("0 : WL_IDLE_STATUS when Wi-Fi is in process of changing between statuses"));
-    Serial.println(F("1 : WL_NO_SSID_AVAIL in case configured SSID cannot be reached"));
-    Serial.println(F("3 : WL_CONNECTED after successful connection is established"));
-    Serial.println(F("4 : WL_CONNECT_FAILED if connection failed"));
-    Serial.println(F("6 : WL_CONNECT_WRONG_PASSWORD if password is incorrect"));
-    Serial.println(F("7 : WL_DISCONNECTED if module is not configured in station mode\n"));
-    Serial.print(F("WiFi status:"));
+      // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
+      Serial.println(F("0 : WL_IDLE_STATUS when Wi-Fi is in process of changing between statuses"));
+      Serial.println(F("1 : WL_NO_SSID_AVAIL in case configured SSID cannot be reached"));
+      Serial.println(F("3 : WL_CONNECTED after successful connection is established"));
+      Serial.println(F("4 : WL_CONNECT_FAILED if connection failed"));
+      Serial.println(F("6 : WL_CONNECT_WRONG_PASSWORD if password is incorrect"));
+      Serial.println(F("7 : WL_DISCONNECTED if module is not configured in station mode\n"));
+      Serial.print(F("WiFi status:"));
     #endif
 
     byte tries = 0;
@@ -118,7 +121,7 @@ void myWifi::autoConnect(CommandHandler cmdHandler, const char* cmdTopic)
     {
       if (tries++ > 130)
       {
-        Serial.println(F("Can not connect WiFi. Start portal..."));
+        Serial.println(F("Can't connect WiFi. Start portal..."));
         sendCmdOpenPortal("Wifi connect failure!");
         break;
       }
@@ -152,15 +155,19 @@ void myWifi::sendCmdOpenPortal(const char* reason)
   }
 }
 
-// This will start a AP allowing user to configure all settings by accessing
-// a web_webServer on the AP. To access the page, connect to the AP ssid (ESP-XXXX)
-// From browser input 192.168.4.1 (Check the serial port prompt for the actual AP IP address)
+// This will start a webserver allowing user to configure all settings via web.
+// Two approach to access the webserver:
+//     1. Connect AP WiFi SSID (usually named "ESP-XXXX"). Browse 192.168.4.1 
+//        (Confirm the console prompt for the actual AP IP address). This
+//        approach is good even the module is disconnected from family Wifi router.
+//     2. Connect via Family network. Only works when the module is still connected
+//        to the family Wifi router with a valid ip address.
 void myWifi::startConfigPortal(bool force) //char const *apName, char const *apPassword)
  {
    Serial.print("Force portal on: ");
    Serial.println(force?F("True"):F("False"));
 
-  _portalOn = true;   // this will enable the pollPortal (see the first line) call in the loop of main.cpp
+  _portalOn = true;         // this will enable the pollPortal call in the loop of main.cpp
   _portalSubmitted = false; // will be set to true when the configuration is done in _handlePortal
   _forcePortal = force;
 
@@ -184,17 +191,14 @@ void myWifi::startConfigPortal(bool force) //char const *apName, char const *apP
   // This is useful when the router is off. Once router is back on
   // the WiFi will reconnect and close the portal automatically.
   WiFi.mode(WIFI_AP_STA);
-
-  String ssidAP = "ESP-" + String(ESP.getChipId());
-  WiFi.softAP(ssidAP.c_str(), NULL); // apPassword);
+  WiFi.softAP(module, NULL); // apPassword);
   _webServer.on("/",  _handlePortal);
   _webServer.begin();
 
-  Serial.print(F("Configuration portal is on.\nSSID: "));
-  Serial.print(ssidAP);
-  Serial.print(F(", IP:"));
-  Serial.println(WiFi.softAPIP());
-  Serial.println(F("Connect AP Wifi and access the IP from Browser for configuration."));
+  Serial.println(F("**Configuration portal on**"));
+  // Serial.print(module);
+  // Serial.print(F(", IP:"));
+  Serial.printf("Browse %s for portal, or connect to Wifi \"%s\" and browse %s instead.\n", settings.ip, module, WiFi.softAPIP().toString().c_str());
 }
 
 void myWifi::closeConfigPortal()
@@ -348,28 +352,17 @@ bool myWifi::getSettings()
   bool crcMatched = settings.CRC == checksum;
 
   // if CRC check fail, the data retrieved to settings are garbage, reset it.
-  if(!crcMatched) settings.reset();
-
-  #ifdef _DEBUG
-    Serial.print(F("\nCRC matched: "));
-    Serial.println(crcMatched?"True":"False!");
-
-    if(crcMatched)
-    {
-      Serial.println(F("Read from EEPROM:"));
-      Serial.println(F("-------------------"));
-      Serial.println(settings.ssid);
-      Serial.println(settings.pass);
-      Serial.println(settings.ip);
-      Serial.println(settings.mqttHost);
-      Serial.println(settings.mqttPort);
-      Serial.println(settings.mqttUser);
-      Serial.println(settings.mqttPass);
-      Serial.println(settings.otaHost);
-      Serial.println(settings.otaPass);
-      Serial.println(F("-------------------"));
-    }
-  #endif
+  if(!crcMatched)
+  {
+    settings.reset();
+    Serial.println(F("Initialize EEPROM..."));
+  }else
+  {
+    #ifdef _DEBUG
+      Serial.println(F("\nCRC matched: "));
+      settings.print();
+    #endif
+  }
 
   return crcMatched;
 }
@@ -380,23 +373,10 @@ void myWifi::setSettings()
 
   #ifdef _DEBUG
     Serial.println("Set EEPROM:");
-    Serial.println(F("-------------------"));
-    Serial.println(settings.ssid);
-    Serial.println(settings.pass);
-    Serial.println(settings.ip);
-    Serial.println(settings.mqttHost);
-    Serial.println(settings.mqttPort);
-    Serial.println(settings.mqttUser);
-    Serial.println(settings.mqttPass);
-    Serial.println(settings.otaHost);
-    Serial.println(settings.otaPass);
-    Serial.println(F("-------------------"));
-    Serial.print("CRC: ");
-    Serial.println(settings.CRC);
-    Serial.println(F("-------------------"));
+    settings.print();
   #endif
   
-  // EEPROM.begin(sizeof(struct settings));
+  EEPROM.begin(sizeof(struct Settings));
   EEPROM.put(0, settings);
   EEPROM.commit();
 }

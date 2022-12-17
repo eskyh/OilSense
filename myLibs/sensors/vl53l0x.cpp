@@ -35,9 +35,10 @@ bool VL53L0X::_read()
   if (measure.RangeStatus != 4) {  // phase failures have incorrect data
     _measures[0] = measure.RangeMilliMeter/10.0;
     return true;
-  } else {
+  }
+  else {
 		#ifdef DEBUG
-    Serial.printf("%s: out of range.\n", _name);
+      Serial.printf("%s: out of range.\n", _name);
 		#endif
     return false;
   }  

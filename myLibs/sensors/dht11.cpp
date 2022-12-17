@@ -42,7 +42,7 @@ bool DH11::_read()
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) || isnan(f)) {
 		#ifdef DEBUG
-    Serial.println("Failed to read from DHT sensor!");
+      Serial.println("Failed to read from DHT sensor!");
 		#endif
     return false;
   }
@@ -57,5 +57,6 @@ bool DH11::_read()
 	_measures[2] = f;
 	_measures[3] = hif;
 	_measures[4] = hic;
+
 	return true;
 }

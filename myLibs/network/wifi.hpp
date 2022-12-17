@@ -16,45 +16,64 @@
 #include <ArduinoOTA.h>
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
-// #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
+// #include <WiFiManager.h>             // https://github.com/tzapu/WiFiManager
 
 #define NTP_MIN_VALID_EPOCH 1640995200  // 1/2/2022. Use https://www.epochconverter.com/
 
 #include <CRC32.h>
 
+// Module configuration data structure in flash
 struct Settings {
-    //Wifi ssid and pass
-    char ssid[25] = "";
-    char pass[15] = "";
-    char ip[16] = "";
+  //Wifi ssid and pass
+  char ssid[25] = "";
+  char pass[15] = "";
+  char ip[16] = "";
 
-    // MQTT host name and port
-    char mqttHost[25] = "";
-    int mqttPort = 1883;
-    char mqttUser[20] = "";
-    char mqttPass[15] = "";
+  // MQTT host name and port
+  char mqttHost[25] = "";
+  int mqttPort = 1883;
+  char mqttUser[20] = "";
+  char mqttPass[15] = "";
 
-    // OTA host name and pass
-    char otaHost[25] = "";
-    char otaPass[15] = "";
+  // OTA host name and pass
+  char otaHost[25] = "";
+  char otaPass[15] = "";
 
-    uint32_t CRC = 0;
+  // CRC used to check if the data is valid
+  uint32_t CRC = 0;
 
-    void reset()
-    {
-      ssid[0] = '\0';
-      pass[0] = '\0';
-      ip[0] = '\0';
+  // Reset all parameters
+  void reset()
+  {
+    ssid[0] = '\0';
+    pass[0] = '\0';
+    ip[0] = '\0';
 
-      mqttHost[0] = '\0';
-      mqttPort = 1883;
-      mqttUser[0] = '\0';
-      mqttPass[0] = '\0';
-      
-      otaHost[0] = '\0';
-      otaPass[0] = '\0';
-      CRC = 0;
-    }
+    mqttHost[0] = '\0';
+    mqttPort = 1883;
+    mqttUser[0] = '\0';
+    mqttPass[0] = '\0';
+    
+    otaHost[0] = '\0';
+    otaPass[0] = '\0';
+    CRC = 0;
+  }
+
+#ifdef _DEBUG
+  void print()
+  {
+    Serial.println(F("-------------------"));
+    Serial.print(F("SSID\t: ")); Serial.println(ssid);
+    Serial.print(F("PASS\t: ")); Serial.println(pass);
+    Serial.print(F("IP\t: ")); Serial.println(ip);
+    Serial.print(F("MQTT\t: ")); Serial.print(mqttHost); Serial.print(F(":")); Serial.println(mqttPort);
+    Serial.print(F("user\t: ")); Serial.println(mqttUser);
+    Serial.print(F("pass\t: ")); Serial.println(mqttPass);
+    Serial.print(F("OTA\t: ")); Serial.println(otaHost);
+    Serial.print(F("pass\t: ")); Serial.println(otaPass);
+    Serial.println(F("-------------------"));
+  }
+#endif
 };
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
@@ -64,6 +83,7 @@ class myWifi
   public:
     // static member has to be defined with inline keyword
     inline static AsyncMqttClient mqttClient;
+    inline static char module[20] = {"ESP-"}; // this will be used as AP WiFi SSID, initialized in autoConnect() function
 
     static void autoConnect(CommandHandler cmdHandler, const char* cmdTopic);
     static void sendCmdOpenPortal(const char* reason);

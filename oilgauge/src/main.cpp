@@ -48,9 +48,9 @@ bool flagForceOpen = false;
 
 void measure()
 {
- if(ssr_sr04) sr04.sendMeasure();
-//  if(ssr_vl53) vl53.sendMeasure();
- if(ssr_dh11) dh11.sendMeasure();
+  if(ssr_sr04) sr04.sendMeasure();
+  // if(ssr_vl53) vl53.sendMeasure();
+  if(ssr_dh11) dh11.sendMeasure();
 }
 
 //--------------------------------------------------
@@ -209,33 +209,29 @@ void setup() {
   // JsonObject obj = doc.as<JsonObject>();
 
 
-  //--------------------------------------------------
-  // Configure the hardware
+  //-- Initialize Pins and Serial speed
 
-  // initialize digital pin LED_BUILTIN as an output (used as heatbeat indicator of the board).
+  // Initialize digital pin LED_BUILTIN as an output (used as ESP heartbeat indicator).
   pinMode(LED_BUILTIN, OUTPUT);
-  // turn the LED on (LOW) and off(HIGH). It is inverted.
-  digitalWrite(LED_BUILTIN, HIGH);  // turn off the LED
+  // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)
+  digitalWrite(LED_BUILTIN, HIGH);  
   
-  Serial.begin(115200);      // Serial Communication baudrate: 9600, 115200, 250000
+  // Serial Communication baudrate: 9600, 115200, 250000
+  Serial.begin(115200);
 
-  // setup callback function and MQTT command topics
+  //-- Setup WiFi, OTA, MQTT command topics & callback function
   myWifi::autoConnect(cmdHandler, MQTT_SUB_CMD);
 
-  // Set sensor mqtt parameters
+  //-- Set MQTT parameters for all sensors
   sr04.setMqtt(&(myWifi::mqttClient), MQTT_PUB_SR04, 0, false);
-//  vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
+  // vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
-  
-  // Save instance of StensTimer to the tensTimer variable
-  pStensTimer = StensTimer::getInstance(); // Tell StensTimer which callback function to use
-  pStensTimer->setStaticCallback(timerCallback);
-  pStensTimer->setInterval(ACT_TICK, 1e3);                    // every 1 Second
-  timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 5e3);   // every 5 Second
 
-  // disconnect WiFi when it's no longer needed
-//  WiFi.disconnect(true);
-//  WiFi.mode(WIFI_OFF);
+  //-- Create timers and the callback function
+  pStensTimer = StensTimer::getInstance(); 
+  pStensTimer->setStaticCallback(timerCallback);              // tell StensTimer which callback function to use
+  pStensTimer->setInterval(ACT_TICK, 1e3);                    // every 1 second
+  timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 9e5);   // every 15min = 900 seconds. Save the returned timer for reset the time interval
 }
 
 void loop() {

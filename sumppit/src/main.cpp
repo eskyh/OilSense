@@ -6,6 +6,12 @@
 
 // #include <ArduinoJson.h>
 
+// ----------------------------------------------------------
+// NOTE: The OTA name is configured through the webserver
+// And it is saved in the flash of the module which is the
+// same as WiFi credentials. 
+// ----------------------------------------------------------
+
 //-- Sensor HC-SR04
 // ----------------------------------------------------
 // Define the pin used of HC-SR04 ultrasonic sensor
@@ -186,39 +192,38 @@ void timerCallback(Timer* timer)
 
 void setup() {
 
-  // initialize digital pin LED_BUILTIN as an output (used as heatbeat indicator of the board).
-  pinMode(LED_BUILTIN, OUTPUT);
-  // turn the LED on (LOW) and off(HIGH). It is inverted.
-  digitalWrite(LED_BUILTIN, HIGH);  // turn off the LED
-  
-  Serial.begin(115200);      // Serial Communication baudrate: 9600, 115200, 250000
+  //-- Initialize Pins and Serial speed
 
-  // setup callback function and MQTT command topics
+  // Initialize digital pin LED_BUILTIN as an output (used as ESP heartbeat indicator).
+  pinMode(LED_BUILTIN, OUTPUT);
+  // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)
+  digitalWrite(LED_BUILTIN, HIGH);
+  
+  // Serial Communication baudrate: 9600, 115200, 250000
+  Serial.begin(115200);
+
+  //-- Setup WiFi, OTA, MQTT command topics & callback function
   myWifi::autoConnect(cmdHandler, MQTT_SUB_CMD);
 
-  // Set sensor mqtt parameters
+  //-- Set MQTT parameters for all sensors
   sr04.setMqtt(&(myWifi::mqttClient), MQTT_PUB_SR04, 0, false);
   // vl53.setMqtt(&(myWifi::mqttClient), MQTT_PUB_VL53, 0, false);
   dh11.setMqtt(&(myWifi::mqttClient), MQTT_PUB_DH11, 0, false);
   
-  // Save instance of StensTimer to the tensTimer variable
-  pStensTimer = StensTimer::getInstance(); // Tell StensTimer which callback function to use
-  pStensTimer->setStaticCallback(timerCallback);
-  pStensTimer->setInterval(ACT_TICK, 1e3);                    // every 1 Second
-  timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 5e3);   // every 5 Second
-
-  // disconnect WiFi when it's no longer needed
-//  WiFi.disconnect(true);
-//  WiFi.mode(WIFI_OFF);
+  //-- Create timers and the callback function
+  pStensTimer = StensTimer::getInstance(); 
+  pStensTimer->setStaticCallback(timerCallback);              // tell StensTimer which callback function to use
+  pStensTimer->setInterval(ACT_TICK, 1e3);                    // every 1 second
+  timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 10e3);  // every 10 seconds. Save the returned timer for reset the time interval
 }
 
 void loop() {
 
-  // let StensTimer do it's magic every time loop() is executed
-  pStensTimer->run();
-
   // Give processing time for ArduinoOTA
   ArduinoOTA.handle();
+
+  // Let StensTimer do it's magic every time loop() is executed
+  pStensTimer->run();
 
   if(flagOpenCfgPortal)
   {
@@ -227,6 +232,6 @@ void loop() {
     flagForceOpen = false;
   }
 
-  // check if need to handle portal stuff, e.g. web services
+  // Check if need to handle portal stuff, e.g. web services
   myWifi::pollPortal();
 }

@@ -96,13 +96,13 @@ void Sensor::sendMeasure()
   // _timestamp = time(NULL); // get current timestamp (in sec), convert it to millisec below
   
   // Accuracy only to 1mm. so output to 1 decimal place.
-	if(!measure())
+  if(!measure())
   {
     Serial.printf("%s: measure failed!\n", _name);
     return;
   }
 	
-	char* payload = getPayload();
+  char* payload = getPayload();
   _pMqttClient->publish(_topic, _qos, _retain, payload); // retain will clear the chart when deploying!! set it to false
 
   #ifdef _DEBUG
@@ -123,10 +123,4 @@ bool Sensor::measure()
   }
 
   return true;
-	
-//    #ifdef DEBUG
-//    Serial.printf("HCSR04 reading: %umm, median: %umm\n", _lastReadings[(_index - 1) % 5], m);
-//    #endif
-//    
-//    return m;
 }
