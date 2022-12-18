@@ -214,7 +214,7 @@ void setup() {
   pStensTimer = StensTimer::getInstance(); 
   pStensTimer->setStaticCallback(timerCallback);              // tell StensTimer which callback function to use
   pStensTimer->setInterval(ACT_TICK, 1e3);                    // every 1 second
-  timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 10e3);  // every 10 seconds. Save the returned timer for reset the time interval
+  timer_sensor = pStensTimer->setInterval(ACT_SENSOR, 5e3);   // every 5 seconds. Save the returned timer for reset the time interval
 }
 
 void loop() {

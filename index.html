@@ -1,0 +1,158 @@
+<html>
+  <head>
+		<meta charset="utf-8" />
+    <title>Chart</title>
+  </head>
+
+ <body>
+ 
+  <font color='red'><b>Note</b>: CSV data file must have header.</font>
+	
+	<br><br>
+	
+	<div id="inputs" class="clearfix">
+    <input type="file" id="files" name="files[]" multiple />
+  </div>
+	<hr />
+		<output id="list"></output>
+  <hr />
+		<div id="my-chart" style="width:100%; height:600px; margin:0 auto"></div>
+	<hr />
+	
+	<table id="contents" style="width:50%; height:400px;" border></table>
+
+	<!-- <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script> -->
+	<script src="https://code.highcharts.com/stock/highstock.js"></script>
+	<script src="https://code.highcharts.com/modules/exporting.js"></script> <!-- include this to show the chart export menu -->
+	<!-- <script src="jquery-csv.js"></script> -->
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+  <script src="http://evanplaice.github.io/jquery-csv/src/jquery.csv.js"></script>
+  <script>
+		// https://stackoverflow.com/questions/2376745/does-html5-allow-you-to-interact-with-local-client-files-from-within-a-browser
+		
+		// https://stackoverflow.com/questions/54165252/use-pandas-to-convert-csv-to-json-for-plotting-two-series-instead-of-one-in-high
+		<!-- <script type="text/javascript"> -->
+		/*$.get( "./data.csv", function(csv) {
+			 // CSVdata is populated with the file contents
+			 / ready to be converted into an Array
+				data = $.csv.toArray(csv);
+				console.log(data)
+		});*/
+
+		$(document).ready(function() {
+		    if (isAPIAvailable()) {
+		        $('#files').bind('change', handleFileSelect);
+						$('#btnReload').bind( "click", function() {});
+		    }
+		});
+
+		function isAPIAvailable() {
+		    // Check for the various File API support.
+		    if (window.File && window.FileReader && window.FileList && window.Blob) {
+		        // Great success! All the File APIs are supported.
+		        return true;
+		    } else {
+		        // source: File API availability - http://caniuse.com/#feat=fileapi
+		        // source: <output> availability - http://html5doctor.com/the-output-element/
+		        document.writeln('The HTML5 APIs used in this form are only available in the following browsers:<br />');
+		        // 6.0 File API & 13.0 <output>
+		        document.writeln(' - Google Chrome: 13.0 or later<br />');
+		        // 3.6 File API & 6.0 <output>
+		        document.writeln(' - Mozilla Firefox: 6.0 or later<br />');
+		        // 10.0 File API & 10.0 <output>
+		        document.writeln(' - Internet Explorer: Not supported (partial support expected in 10.0)<br />');
+		        // ? File API & 5.1 <output>
+		        document.writeln(' - Safari: Not supported<br />');
+		        // ? File API & 9.2 <output>
+		        document.writeln(' - Opera: Not supported');
+		        return false;
+		    }
+		}
+		
+    function handleFileSelect(evt) {
+      var files = evt.target.files; // FileList object
+      var file = files[0];
+
+      // read the file metadata
+      var output = ''
+          output += '<span style="font-weight:bold;">' + escape(file.name) + '</span><br />\n';
+          output += ' - FileType: ' + (file.type || 'n/a') + '<br />\n';
+          output += ' - FileSize: ' + file.size + ' bytes<br />\n';
+          output += ' - LastModified: ' + (file.lastModifiedDate ? file.lastModifiedDate.toLocaleDateString() : 'n/a') + '<br />\n';
+
+      // read the file contents
+      printTable(file);
+
+      // post the results
+      $('#list').html(output); //.append(output);
+    }
+		
+		function printTable(file) {
+		    var reader = new FileReader();
+		    reader.readAsText(file);
+		    reader.onload = function(event) {
+		        var csv = event.target.result;
+		        var data = $.csv.toArrays(csv, {onParseValue: $.csv.hooks.castToScalar});
+
+		        displayChart(data);
+
+		        var html = '';
+		        for (var row in data) {
+		            html += '<tr>\r\n';
+		            for (var item in data[row]) {
+		                html += '<td>' + data[row][item] + '</td>\r\n';
+		            }
+		            html += '</tr>\r\n';
+		        }
+		        $('#contents').html(html);
+		    };
+		    reader.onerror = function() {
+		        alert('Unable to read ' + file.fileName);
+		    };
+		}
+
+		function displayChart(data) {
+		
+				
+				var header = data[0];
+				var ss = Array(header.length-1);
+				
+				for(i=0; i<ss.length; i++) ss[i] = [];
+				// ss.forEach((s,i) => { ss[i] = [];});
+				// ss.forEach(s => { s = [];});
+				
+		    data.slice(1).forEach((row) => {
+					row.slice(1).forEach((el, i) => {
+						ss[i].push([row[0], el]);
+					});
+		    });
+				
+				var srs = Array(header.length-1);
+				for(i=0; i<srs.length; i++) srs[i] = [];
+				
+				header.slice(1).forEach((col, i) => {
+					srs[i] = {
+											name: col,
+											data: ss[i],
+											tooltip: {valueDecimals: 2}
+										};
+				});
+
+		    // Create the chart
+		    Highcharts.stockChart('my-chart', {
+
+		        rangeSelector: {
+		          selected: 1
+		        },
+		        title: {
+		          text: 'Chart Title Here'
+		        },
+						legend: {
+							enabled: true
+						},
+		        series: srs
+		    });
+		};
+    </script>
+  </body>
+</html>
