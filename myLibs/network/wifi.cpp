@@ -75,6 +75,11 @@ void myWifi::_connectToWifi()
   WiFi.config(ip, subnet, gateway, dns);
   
   WiFi.begin(settings.ssid, settings.pass);
+
+  // auto reconnect when lost WiFi connection
+  // https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
 }
 
 void myWifi::autoConnect(CommandHandler cmdHandler, const char* cmdTopic)
@@ -90,9 +95,6 @@ void myWifi::autoConnect(CommandHandler cmdHandler, const char* cmdTopic)
   // read settings from EEPROM. CRC is checked to see if the saved data are valid
   if(getSettings())
   {
-    // initialize module name
-    snprintf(module, sizeof(module), "ESP-%s-%d", settings.otaHost, ESP.getChipId()); // ChipId is unique for the hardware, while otahost can be configured
-
     _connectToWifi();
     //uncomment below to trigger startConfigPortal
     // WiFi.disconnect(true);
@@ -190,15 +192,22 @@ void myWifi::startConfigPortal(bool force) //char const *apName, char const *apP
   // use WIFI_AP_STA model such that WiFi reconnecting still going on
   // This is useful when the router is off. Once router is back on
   // the WiFi will reconnect and close the portal automatically.
+
+  // construct ssid name
+  char ssid[40];    // this will be used as AP WiFi SSID
+  short ipAddress[4]; // used to save the forw octets of the ipaddress
+  _extractIpAddress(settings.ip, &ipAddress[0]);
+  snprintf(ssid, sizeof(ssid), "ESP-%s-%d", settings.otaHost, ipAddress[3]);//ESP.getChipId()); // ChipId is unique for the hardware, while otahost can be configured
+
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(module, NULL); // apPassword);
+  WiFi.softAP(ssid, NULL); // apPassword);
   _webServer.on("/",  _handlePortal);
   _webServer.begin();
 
   Serial.println(F("**Configuration portal on**"));
-  // Serial.print(module);
+  // Serial.print(ssid);
   // Serial.print(F(", IP:"));
-  Serial.printf("Browse %s for portal, or connect to Wifi \"%s\" and browse %s instead.\n", settings.ip, module, WiFi.softAPIP().toString().c_str());
+  Serial.printf("Browse %s for portal, or connect to Wifi \"%s\" and browse %s instead.\n", settings.ip, ssid, WiFi.softAPIP().toString().c_str());
 }
 
 void myWifi::closeConfigPortal()
@@ -554,4 +563,32 @@ void myWifi::setUpOTA()
   });
   ArduinoOTA.begin();
   Serial.printf("OTA Ready. IP: %s\n", WiFi.localIP().toString().c_str());
+}
+
+/*
+https://www.includehelp.com/c-programs/format-ip-address-octets.aspx
+Arguments : 
+1) sourceString - String pointer that contains ip address
+2) ipAddress - Target variable short type array pointer that will store ip address octets
+*/
+void myWifi::_extractIpAddress(char* sourceString, short* ipAddress)
+{
+    short len = 0;
+    char oct[4] = { 0 }, cnt = 0, cnt1 = 0, i, buf[5];
+
+    len = strlen(sourceString);
+    for (i = 0; i < len; i++) {
+        if (sourceString[i] != '.') {
+            buf[cnt++] = sourceString[i];
+        }
+        if (sourceString[i] == '.' || i == len - 1) {
+            buf[cnt] = '\0';
+            cnt = 0;
+            oct[cnt1++] = atoi(buf);
+        }
+    }
+    ipAddress[0] = oct[0];
+    ipAddress[1] = oct[1];
+    ipAddress[2] = oct[2];
+    ipAddress[3] = oct[3];
 }

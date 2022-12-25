@@ -6,7 +6,7 @@
 
  <body>
  
-  <font color='red'><b>Note</b>: CSV data file must have header.</font>
+  <font color='blue'><b>Note</b>: CSV data file must have header.</font>
 	
 	<br><br>
 	
@@ -38,6 +38,19 @@
 				data = $.csv.toArray(csv);
 				console.log(data)
 		});*/
+		
+		
+		Highcharts.setOptions({
+			// https://stackoverflow.com/questions/35008276/highcharts-line-chart-is-using-wrong-timezone
+			global: {
+					useUTC: false,
+					timezoneOffset: -5
+			},
+			//https://stackoverflow.com/questions/25557734/highcharts-is-not-respecting-my-x-axis-date-interval
+			xAxis: {       
+				ordinal: false
+			}
+		});
 
 		$(document).ready(function() {
 		    if (isAPIAvailable()) {
@@ -94,7 +107,7 @@
 		        var csv = event.target.result;
 		        var data = $.csv.toArrays(csv, {onParseValue: $.csv.hooks.castToScalar});
 
-		        displayChart(data);
+		        displayChart(data, file.name);
 
 		        var html = '';
 		        for (var row in data) {
@@ -111,7 +124,7 @@
 		    };
 		}
 
-		function displayChart(data) {
+		function displayChart(data, title) {
 		
 				
 				var header = data[0];
@@ -145,7 +158,7 @@
 		          selected: 1
 		        },
 		        title: {
-		          text: 'Chart Title Here'
+		          text: title
 		        },
 						legend: {
 							enabled: true

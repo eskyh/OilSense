@@ -83,7 +83,6 @@ class myWifi
   public:
     // static member has to be defined with inline keyword
     inline static AsyncMqttClient mqttClient;
-    inline static char module[20] = {"ESP-"}; // this will be used as AP WiFi SSID, initialized in autoConnect() function
 
     static void autoConnect(CommandHandler cmdHandler, const char* cmdTopic);
     static void sendCmdOpenPortal(const char* reason);
@@ -135,6 +134,9 @@ class myWifi
     static void _setupWifiListener();
     static void _connectToWifi();
     static void _connectToMqtt();
+
+    // extract ip address
+    static void _extractIpAddress(char* sourceString, short* ipAddress);
 
     // Disallow creating an instance of this object by putting constructor in private
     myWifi() {};
