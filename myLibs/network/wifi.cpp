@@ -199,7 +199,9 @@ void myWifi::startConfigPortal(bool force) //char const *apName, char const *apP
   char ssid[40];    // this will be used as AP WiFi SSID
   short ipAddress[4]; // used to save the forw octets of the ipaddress
   _extractIpAddress(settings.ip, &ipAddress[0]);
-  snprintf(ssid, sizeof(ssid), "ESP-%s-%d", settings.otaHost, ipAddress[3]);//ESP.getChipId()); // ChipId is unique for the hardware, while otahost can be configured
+  // return actual bytes written.  If not, compiler will complain with warning
+  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", settings.otaHost, ipAddress[3]);
+  if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");  
 
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(ssid, NULL); // apPassword);
@@ -573,13 +575,14 @@ Arguments :
 1) sourceString - String pointer that contains ip address
 2) ipAddress - Target variable short type array pointer that will store ip address octets
 */
-void myWifi::_extractIpAddress(char* sourceString, short* ipAddress)
+void myWifi::_extractIpAddress(const char* sourceString, short* ipAddress)
 {
     short len = 0;
-    char oct[4] = { 0 }, cnt = 0, cnt1 = 0, i, buf[5];
+    char oct[4] = { 0 }, buf[5];
+    unsigned cnt = 0, cnt1 = 0;
 
     len = strlen(sourceString);
-    for (i = 0; i < len; i++) {
+    for (int i = 0; i < len; i++) {
         if (sourceString[i] != '.') {
             buf[cnt++] = sourceString[i];
         }

@@ -37,6 +37,11 @@
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
+/* To allow callbacks on class instances you should let your class implement
+IStensTimerListener and implement its timerCallback function as shown below.
+
+Check examples in https://gitlab.com/arduino-libraries/stens-timer
+*/
 class EspClient : public IStensTimerListener
 {
   // Singleton design (e.g., private constructor)
@@ -49,6 +54,7 @@ class EspClient : public IStensTimerListener
     // must called before loop(), therefore in the setup() in main program
     void setCommandHandler(CommandHandler cmdHandler, const char* cmdTopic); 
 
+    void setup();
     void loop(); // Main loop, to call at each sketch loop()
 
     virtual void timerCallback(Timer* timer);
@@ -65,20 +71,11 @@ class EspClient : public IStensTimerListener
     EspClient(const EspClient&);
     EspClient& operator=(const EspClient&);
 
-    // Wifi related
-  //   const char* _wifiSsid;
-  //   const char* _wifiPassword;
-
-  //   const char* _mqttServerIp;
-  //   const char* _mqttUsername;
-  //   const char* _mqttPassword;
-  //   const char* _mqttClientName;
-  //   uint16_t _mqttServerPort;
     bool _mqttCleanSession;
   //   char* _mqttLastWillTopic;
   //   char* _mqttLastWillMessage;
   //   bool _mqttLastWillRetain;
-    unsigned int _failedMQTTConnectionAttemptCount;
+    // unsigned int _failedMQTTConnectionAttemptCount;
 
     CommandHandler _cmdHandler;     // command handler function for command from either wifi module or mqtt command
     char _cmdTopic[25];             // save the mqtt command topic set by autoConnect()
@@ -97,16 +94,17 @@ class EspClient : public IStensTimerListener
     // Allow to set the minimum delay between each MQTT reconnection attempt. 15 seconds by default.
     // inline void setMqttReconnectionAttemptDelay(const unsigned int milliseconds) { _mqttReconnectionAttemptDelay = milliseconds; };
 
+    void openConfigPortal(bool force=false, bool blocking=false);
+    void closeConfigPortal();
+
   private:
-    inline static bool _portalOn = false;         // indicate if configuration portal is on
-    inline static bool _portalSubmitted = false;  // The configuration form submitted
-    inline static bool _forcePortal = false;      // indicate if force turn on portal anyway no matter network is connected or not
-    inline static char _portalReason[50];         // reason of open portal
+    bool _portalOn = false;         // indicate if configuration portal is on
+    bool _portalSubmitted = false;  // The configuration form submitted
+    bool _forcePortal = false;      // indicate if force turn on portal anyway no matter network is connected or not
+    char _portalReason[50];         // reason of open portal
 
     WebServer _webServer = WebServer(80);
     void _handleWebRequest();
-    void _openConfigPortal(bool force=false);
-    void _closeConfigPortal();
     void _handleConfigPortal();
 
     bool _wifiConnected = false;
@@ -115,20 +113,21 @@ class EspClient : public IStensTimerListener
     void _handleWifi();
 
     // MQTT related
-    byte _nMqttReconnect = 0;       // count number of MQTT connect try before ask for turn on portal_nMqttReconnect
+    const byte _nMaxMqttReconnect = 15;       // Max number of MQTT connect tries before ask for turn on portal
     bool _mqttConnected = false;
-    unsigned long _nextMqttConnectionAttemptMillis;
-    unsigned int _mqttReconnectionAttemptDelay;
+    bool _mqttConnecting = false;    // indicate the timer to reconnect is set, but not connected yet.
+
+    // unsigned int _mqttReconnectionAttemptDelay;
     void _setupMQTT();
     void _handleMQTT();
 
     void _setupOTA();
 
-    void _connectToWifi();
+    void _connectToWifi(bool blocking=false);
     void _connectToMqttBroker();
   //   void processDelayedExecutionRequests();
 
-    // Timer for reconnections
+    // Timer action IDs
     enum {
       ACT_MQTT_RECONNECT = 0,
       ACT_MQTT_SUBSCRIBE = 1,

@@ -24,7 +24,8 @@ struct Settings {
 
   Settings()
   {
-     snprintf(otaHost, sizeof(otaHost), "ESP-%d", ESP.getChipId()); // initialize the otaHost name
+    //  snprintf(otaHost, sizeof(otaHost), "ESP-%d", ESP.getChipId()); // initialize the otaHost name
+    snprintf(otaHost, sizeof(otaHost), "E%d", ESP.getChipId()); // initialize the otaHost name
   }
 
   // Reset all parameters

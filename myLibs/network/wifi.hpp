@@ -84,7 +84,7 @@ class myWifi
     static void _connectToMqtt();
 
     // extract ip address
-    static void _extractIpAddress(char* sourceString, short* ipAddress);
+    static void _extractIpAddress(const char* sourceString, short* ipAddress);
 
     // Disallow creating an instance of this object by putting constructor in private
     myWifi() {};
