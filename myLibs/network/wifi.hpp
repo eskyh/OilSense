@@ -24,23 +24,28 @@
 
 // Module configuration data structure in flash
 struct Settings {
-  //Wifi ssid and pass
+  //Wifi
   char ssid[25] = "";
   char pass[15] = "";
   char ip[16] = "";
 
-  // MQTT host name and port
+  // MQTT broker
   char mqttHost[25] = "";
   int mqttPort = 1883;
   char mqttUser[20] = "";
   char mqttPass[15] = "";
 
   // OTA host name and pass
-  char otaHost[25] = "";
+  char otaHost[40] = ""; // this is also use as mqtt client name when needed
   char otaPass[15] = "";
 
   // CRC used to check if the data is valid
   uint32_t CRC = 0;
+
+  Settings()
+  {
+     snprintf(otaHost, sizeof(otaHost), "ESP-%s", ESP.getChipId()); // initialize the otaHost name
+  }
 
   // Reset all parameters
   void reset()

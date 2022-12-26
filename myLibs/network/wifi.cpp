@@ -77,8 +77,10 @@ void myWifi::_connectToWifi()
   WiFi.begin(settings.ssid, settings.pass);
 
   // auto reconnect when lost WiFi connection
+  // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#setautoconnect
   // https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
-  WiFi.setAutoReconnect(true);
+  WiFi.setAutoConnect(true);   // Configure module to automatically connect on power on to the last used access point.
+  WiFi.setAutoReconnect(true); // Set whether module will attempt to reconnect to an access point in case it is disconnected.
   WiFi.persistent(true);
 }
 
