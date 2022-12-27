@@ -12,16 +12,23 @@ EspClient::EspClient()
 {
 }
 
-void EspClient::setup()
+void EspClient::setup(CommandHandler cmdHandler, const char* cmdTopic)
 {
   #ifdef _DEBUG
     Serial.println("\n\nsetup()");
   #endif
 
-  // openConfigPortal(true, true);
+  // set up cmdHandler and cmdTopic
+  // do this before anything else, as turn on portal cmd will be send to cmdHandler if there is connection issue
+  _cmdHandler = cmdHandler;
+  strncpy(_cmdTopic, cmdTopic, sizeof(_cmdTopic));
 
   if(!getSettings())
   {
+    #ifdef _DEBUG
+      Serial.println(F("Open portal in setup()"));
+    #endif
+
     // open portal at blocking mode
     openConfigPortal(true, true);
   }
@@ -29,7 +36,7 @@ void EspClient::setup()
   _setupWifi(); // _setupOTA is done in _handleWifi() when Wifi is connected
   _setupMQTT();
 
-  _connectToWifi(true);
+  _connectToWifi(true); // blocking mode
 }
 
 void EspClient::loop()
@@ -199,6 +206,8 @@ void EspClient::_connectToWifi(bool blocking)
 
   if(blocking)
   {
+    //TODO: set timeout to open portal to update config (wrong cfg might be the reason that not working)
+
     Serial.print("Connecting to Wifi");
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -235,13 +244,18 @@ void EspClient::_setupWifi()
   // set up WiFi even handler. Note must save the handler returned, otherwise it will be auto deleted.
   // see https://github.com/esp8266/Arduino/issues/2545
   hWifiGotIp = WiFi.onStationModeGotIP([this] (const WiFiEventStationModeGotIP& event) {
-      Serial.print(F("\nConnected to WiFi. IP: "));
+      Serial.println();
+      Serial.println(F("-------------------------------------"));
+      Serial.print(F("WiFi connected. IP: "));
       Serial.println(WiFi.localIP().toString().c_str());
+      Serial.println(F("-------------------------------------"));
       _wifiConnected = true;
     });
 
   hWifiDisconnected = WiFi.onStationModeDisconnected([this] (const WiFiEventStationModeDisconnected& event) {
-      Serial.println(F("Lost Wi-Fi."));
+      Serial.println(F("-------------------"));  
+      Serial.println(F("Wi-Fi disconnected"));
+      Serial.println(F("-------------------"));
       _wifiConnected = false;
     });
 }
@@ -257,7 +271,7 @@ void EspClient::_setupMQTT()
     _mqttConnected = true;
 
     Serial.println(F("-------------------"));
-    Serial.println(F("MQTT connected."));
+    Serial.println(F("MQTT connected"));
     Serial.println(F("-------------------"));
 
     // set timmer to subscribe command topic
@@ -269,8 +283,10 @@ void EspClient::_setupMQTT()
   });
 
   mqttClient.onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
+    
+    Serial.println(F("-------------------------------"));
     #ifdef _DEBUG
-      Serial.print("Disconnected from MQTT, reason: ");
+      Serial.print("MQTT disconnected, reason: ");
       if (reason == AsyncMqttClientDisconnectReason::TLS_BAD_FINGERPRINT) {
         Serial.println(F("Bad server fingerprint."));
       } else if (reason == AsyncMqttClientDisconnectReason::TCP_DISCONNECTED) {
@@ -288,7 +304,10 @@ void EspClient::_setupMQTT()
       } else if (reason == AsyncMqttClientDisconnectReason::ESP8266_NOT_ENOUGH_SPACE) {
         Serial.println(F("Not enough space on esp8266."));
       }
+    #else
+      Serial.print("MQTT disconnected");
     #endif
+    Serial.println(F("-------------------------------"));
 
     _mqttConnected = false;
   });
@@ -317,7 +336,7 @@ void EspClient::_setupMQTT()
     AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
     
     #ifdef _DEBUG
-      Serial.println(F("Publish received."));
+      Serial.println(F("Message received:"));
       Serial.printf("  topic: %s\n", topic);
       Serial.printf("  qos: %d\n", properties.qos);
       Serial.printf("  dup: %s\n", properties.dup ? "true" : "false");
@@ -412,8 +431,17 @@ void EspClient::_setupOTA()
 // parameter: force means force open the portal (even there is no connection issue)
 void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName, char const *apPassword)
  {
+  if(_portalOn)
+  {
+    #ifdef _DEBUG
+      Serial.println(F("Portal already on."));
+    #endif
+
+    return;
+  }
+
   #ifdef _DEBUG
-    if(force) Serial.print("Portal force: True.");
+    if(force) Serial.println("Portal force: True.");
   #endif
 
   _portalOn = true;         // this will enable the pollPortal call in the loop of main.cpp
@@ -427,7 +455,7 @@ void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName
   {
     // set timmer to subscribe command topic
     StensTimer *pTimer = StensTimer::getInstance(); 
-    pTimer->setTimer(this, ACT_CFG_PORTAL, 120e3); // default repeatation = 1. Close the portal in 120s
+    pTimer->setTimer(this, ACT_CLOSE_PORTAL, 120e3); // default repeatation = 1. Close the portal in 120s
   }
 
   // use WIFI_AP_STA model such that WiFi reconnecting still going on
@@ -450,10 +478,12 @@ void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName
   _webServer.begin();
   MDNS.addService("http", "tcp", 80);
 
-  Serial.println(F("**Configuration portal on**"));
   // Serial.print(ssid);
   // Serial.print(F(", IP:"));
+  Serial.println(F("-------------------------"));
+  Serial.println(F("Configuration portal on"));
   Serial.printf("Browse %s for portal, or connect to Wifi \"%s\" and browse %s instead.\n", settings.ip, ssid, WiFi.softAPIP().toString().c_str());
+  Serial.println(F("-------------------------"));
 
   if(blocking)
   {
@@ -601,7 +631,7 @@ void EspClient::timerCallback(Timer* timer)
     int action = timer->getAction();
 
     #ifdef _DEBUG
-      Serial.print("timerCallback(), act=\n");
+      Serial.print("timerCallback(), act=");
     #endif
 
     switch(action)
@@ -613,7 +643,7 @@ void EspClient::timerCallback(Timer* timer)
         
         if(_mqttConnected)
         {
-          // MQTT connected already, delete this timer
+          // MQTT connected already, delete reconnect timer
           StensTimer *pTimer = StensTimer::getInstance();
           pTimer->deleteTimer(timer);
 
@@ -628,12 +658,14 @@ void EspClient::timerCallback(Timer* timer)
           int repetitions = timer->getRepetitions();
           if(repetitions > 1)
           {
+            // not reaching max number of reconnect try, reconnect again
             _connectToMqttBroker();
             Serial.print(F("Repetitions: "));
             Serial.println(repetitions);
           }else
           {
             // reach last one, restart the ESP
+            // TODO: open portal to confirm cfg is right before restart?
             #ifdef ESP8266
               ESP.reset();
             #elif defined(ESP32)
@@ -647,7 +679,7 @@ void EspClient::timerCallback(Timer* timer)
 
       case ACT_MQTT_SUBSCRIBE:
         #ifdef _DEBUG
-          Serial.println("ACT_MQTT_SUBSCRIBE");
+          Serial.println(F("ACT_MQTT_SUBSCRIBE"));
         #endif
 
         if(_cmdTopic[0] != '\0')
@@ -660,13 +692,15 @@ void EspClient::timerCallback(Timer* timer)
         }
         break;
 
-      case ACT_CFG_PORTAL:
+      case ACT_CLOSE_PORTAL:
         #ifdef _DEBUG
-          Serial.println("ACT_CFG_PORTAL");
+          Serial.println(F("ACT_CLOSE_PORTAL"));
         #endif
 
         // time out in 120s (2min)
-        Serial.println(F("Time out. Exit portal."));
+        Serial.println(F("----------------------------"));
+        Serial.println(F("Portal close on timeout"));
+        Serial.println(F("----------------------------"));
         closeConfigPortal();
         break;
     }

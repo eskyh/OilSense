@@ -2,6 +2,7 @@
 
 #include "sensor.hpp"
 #include "filter.hpp"
+#include "EspClient.hpp"
 
 // name: sensor name
 // nMeasures: number of measures a sensor can generator (some sensor integrates multiple type of measures)
@@ -86,6 +87,9 @@ void Sensor::setMqtt(AsyncMqttClient *pClient, const char* topic, int qos, bool 
 
 void Sensor::sendMeasure()
 {
+	// do not do anything if not connected to network
+	if(!EspClient::instance().isConnected()) return;
+
   if (_pMqttClient == NULL)
   {
     Serial.println(F("MQTT client is not set!"));
@@ -106,7 +110,7 @@ void Sensor::sendMeasure()
   _pMqttClient->publish(_topic, _qos, _retain, payload); // retain will clear the chart when deploying!! set it to false
 
   #ifdef _DEBUG
-	Serial.printf("%s: %s\n", _name, payload);
+		Serial.printf("%s: %s\n", _name, payload);
   #endif
 }
 

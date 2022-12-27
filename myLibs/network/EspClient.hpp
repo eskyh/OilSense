@@ -54,7 +54,7 @@ class EspClient : public IStensTimerListener
     // must called before loop(), therefore in the setup() in main program
     void setCommandHandler(CommandHandler cmdHandler, const char* cmdTopic); 
 
-    void setup();
+    void setup(CommandHandler cmdHandler, const char* cmdTopic);
     void loop(); // Main loop, to call at each sketch loop()
 
     virtual void timerCallback(Timer* timer);
@@ -83,7 +83,7 @@ class EspClient : public IStensTimerListener
     // HTTP/OTA update related
 
   public:
-    // inline bool isConnected() const { return isWifiConnected() && isMqttConnected(); }; // Return true if everything is connected
+    inline bool isConnected() const { return _wifiConnected && _mqttConnected; }; // Return true if everything is connected
     // inline bool isWifiConnected() const { return _wifiConnected; }; // Return true if wifi is connected
     // inline bool isMqttConnected() const { return _mqttConnected; }; // Return true if mqtt is connected
     // inline unsigned int getConnectionEstablishedCount() const { return _connectionEstablishedCount; }; // Return the number of time onConnectionEstablished has been called since the beginning.
@@ -131,7 +131,7 @@ class EspClient : public IStensTimerListener
     enum {
       ACT_MQTT_RECONNECT = 0,
       ACT_MQTT_SUBSCRIBE = 1,
-      ACT_CFG_PORTAL     = 2
+      ACT_CLOSE_PORTAL   = 2
     };
 
     // Utilities
