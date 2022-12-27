@@ -51,7 +51,7 @@ struct Settings {
     Serial.println(F("-------------------"));
     Serial.print(F("SSID\t: ")); Serial.println(ssid);
     Serial.print(F("PASS\t: ")); Serial.println(pass);
-    Serial.print(F("IP\t: ")); Serial.println(ip);
+    Serial.print(F("Stat IP\t: ")); Serial.println(ip);
     Serial.print(F("MQTT\t: ")); Serial.print(mqttHost); Serial.print(F(":")); Serial.println(mqttPort);
     Serial.print(F("user\t: ")); Serial.println(mqttUser);
     Serial.print(F("pass\t: ")); Serial.println(mqttPass);

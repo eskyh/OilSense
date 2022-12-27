@@ -30,7 +30,7 @@ void EspClient::setup(CommandHandler cmdHandler, const char* cmdTopic)
     #endif
 
     // open portal at blocking mode
-    openConfigPortal(true, true);
+    openConfigPortal(true);
   }
 
   _setupWifi(); // _setupOTA is done in _handleWifi() when Wifi is connected
@@ -41,68 +41,31 @@ void EspClient::setup(CommandHandler cmdHandler, const char* cmdTopic)
 
 void EspClient::loop()
 {
-  static StensTimer *pStensTimer = StensTimer::getInstance();
-
+  static StensTimer *pTimer = StensTimer::getInstance();
   // let StensTimer do it's magic every time loop() is executed
-  pStensTimer->run();
+  pTimer->run();
 
   // static bool setup = false;
 
-  // handle configuration portal
-  if(_portalOn)
+  // A loop to enable the _webServer process client request 
+  if(_portalOn) _webServer.handleClient();
+
+  // Wifi handling
+  if(!_wifiConnected)
   {
-    _handleConfigPortal();
+    // Do nothing else as ESP WiFi module take care of reconnecting (configured in _connectToWifi())
+    return;
+
+  }else
+  {
+    #ifdef ESP8266
+      MDNS.update(); // We need to do this only for ESP8266
+    #endif
+
+    ArduinoOTA.handle();
   }
 
-  _handleWifi();
-  if(!_wifiConnected) return; // do not do anything else if the WiFi is disconnected.
-
-  // MQTT Handling
-  _handleMQTT();
-  if(!_mqttConnected) return;
-
-  // Procewss the delayed execution commands
-  // processDelayedExecutionRequests(); 
-}
-
-void EspClient::_handleWifi()
-{
-  // static bool init = true;
-
-  // if(init)
-  // {
-  //   // initial connect to Wifi, it will auto reconnect by the WIFI library
-  //   // as set in the _connectToWifi()
-  //   _connectToWifi(true); // blocking
-  //   init = false;
-
-  // }else
-  {
-    // Connection in progress
-    if(!_wifiConnected)
-    {
-      // if(!wifiConnecting)
-      // {
-      //   _connectToWifi();
-      //   wifiConnecting = true;
-      // }
-    }
-    else
-    {
-      // wifiConnecting = false;
-
-      _handleConfigPortal();
-      #ifdef ESP8266
-        MDNS.update(); // We need to do this only for ESP8266
-      #endif
-
-      ArduinoOTA.handle();
-    }
-  }
-}
-
-void EspClient::_handleMQTT()
-{
+  // MQTT reconnect handling if it is disconnected
   if(_wifiConnected && !_mqttConnected && !_mqttConnecting)
   {
     // mqtt is not connected yet.
@@ -120,11 +83,11 @@ void EspClient::_handleMQTT()
     // This delay prevent these instabilities.
 
     StensTimer *pTimer = StensTimer::getInstance(); 
-    pTimer->setTimer(this, ACT_MQTT_RECONNECT, 2e3, _nMaxMqttReconnect);
+    pTimer->setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
     _mqttConnecting = true;
 
     #ifdef _DEBUG
-      Serial.println("MQTT reconnect timmer set.");
+      Serial.println("MQTT: Set reconnect timmer");
     #endif
   }
 }
@@ -192,25 +155,43 @@ void EspClient::_connectToWifi(bool blocking)
 
   // do not change the mode (can be WIFI_STA or WIFI_AP_STA), just reconnect
 
+  // NOTE: The following reason is outdated, true reason explained down below (next NOTE:)
   // https://arduino.stackexchange.com/questions/78604/esp8266-wifi-not-connecting-to-internet-without-static-ip
   // Configure static IP will work for latest ESP8266 lib v3.0.2 where DHCP has problem
   // To make DHCP work, it need revert back to v2.5.2
-  IPAddress ip;   //ESP static ip
-  ip.fromString(settings.ip);
-  IPAddress subnet(255,255,255,0);  //Subnet mask
-  IPAddress gateway(192,168,0,1);   //IP Address of your WiFi Router (Gateway)
-  IPAddress dns(0, 0, 0, 0);        //DNS 167.206.10.178
-  WiFi.config(ip, subnet, gateway, dns);
   
+  // check if static ip address configured (non-empty)
+  if(settings.ip[0]=='\0')
+  {
+    IPAddress ip;   //ESP static ip
+    if(ip.fromString(settings.ip)) // parsing ip address
+    {
+      Serial.println(F("Using static ip"));
+
+      IPAddress subnet(255,255,255,0);  //Subnet mask
+      IPAddress gateway(192,168,0,1);   //IP Address of your WiFi Router (Gateway)
+      IPAddress dns(0, 0, 0, 0);        //DNS 167.206.10.178
+      WiFi.config(ip, subnet, gateway, dns);
+    }
+  }
+
+  //------------------------------------------------------------------------------------------------------------------
+  // NOTE: the reason above is persistent WiFi.setAutoConnect(true) which will trigger auto connect at power on
+  // conflicting with the WiFi.begin(ssid, pass) call below. To solve this problem, WiFi.setAutoConnect(false), and
+  // persistent the setting by WiFi.persistent(true).
+  //------------------------------------------------------------------------------------------------------------------
   WiFi.begin(settings.ssid, settings.pass);
+
+  // set timmer for Wifi connect timeout in 120s (will open portal in blocking mode!!)
+  StensTimer *pTimer = StensTimer::getInstance(); 
+  pTimer->setTimer(this, ACT_WIFI_CONNECT_TIMEOUT, WIFI_CONNECTING_TIMEOUT);
 
   if(blocking)
   {
-    //TODO: set timeout to open portal to update config (wrong cfg might be the reason that not working)
-
     Serial.print("Connecting to Wifi");
     while (WiFi.status() != WL_CONNECTED)
     {
+      pTimer->run(); // on blocking mode, need to handle timer logic to check timeout event!
       delay(500);
       Serial.print(".");
     }
@@ -219,9 +200,9 @@ void EspClient::_connectToWifi(bool blocking)
     // auto reconnect when lost WiFi connection
     // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#setautoconnect
     // https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
-    WiFi.setAutoConnect(true);   // Configure module to automatically connect on power on to the last used access point.
+    WiFi.setAutoConnect(false);  // (Disable it) Configure module to automatically connect on power on to the last used access point.
     WiFi.setAutoReconnect(true); // Set whether module will attempt to reconnect to an access point in case it is disconnected.
-    WiFi.persistent(true);
+    WiFi.persistent(true);       // persistent is true by default
   }
 }
 
@@ -231,7 +212,7 @@ WiFiEventHandler hWifiGotIp, hWifiDisconnected;
 void EspClient::_connectToMqttBroker()
 {
   mqttClient.connect();
-  Serial.print(F("Connecting to MQTT: "));
+  Serial.print(F("MQTT: Connecting "));
   Serial.println(settings.mqttHost);
 }
 
@@ -276,7 +257,7 @@ void EspClient::_setupMQTT()
 
     // set timmer to subscribe command topic
     StensTimer *pTimer = StensTimer::getInstance(); 
-    pTimer->setTimer(this, ACT_MQTT_SUBSCRIBE, 1e3); // default repeatation = 1
+    pTimer->setTimer(this, ACT_MQTT_SUBSCRIBE, MQTT_SUBSCRIBE_DELAY); // default repeatation = 1
 
     // close portal if it is on
     if(_portalOn) closeConfigPortal();
@@ -284,9 +265,11 @@ void EspClient::_setupMQTT()
 
   mqttClient.onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
     
-    Serial.println(F("-------------------------------"));
+    Serial.println(F("----------------------------------------------"));
+    Serial.println(F("MQTT: Disconnected"));
+
     #ifdef _DEBUG
-      Serial.print("MQTT disconnected, reason: ");
+      Serial.print(F("reason: "));
       if (reason == AsyncMqttClientDisconnectReason::TLS_BAD_FINGERPRINT) {
         Serial.println(F("Bad server fingerprint."));
       } else if (reason == AsyncMqttClientDisconnectReason::TCP_DISCONNECTED) {
@@ -304,10 +287,8 @@ void EspClient::_setupMQTT()
       } else if (reason == AsyncMqttClientDisconnectReason::ESP8266_NOT_ENOUGH_SPACE) {
         Serial.println(F("Not enough space on esp8266."));
       }
-    #else
-      Serial.print("MQTT disconnected");
     #endif
-    Serial.println(F("-------------------------------"));
+    Serial.println(F("----------------------------------------------"));
 
     _mqttConnected = false;
   });
@@ -336,7 +317,7 @@ void EspClient::_setupMQTT()
     AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
     
     #ifdef _DEBUG
-      Serial.println(F("Message received:"));
+      Serial.println(F("MQTT msg received:"));
       Serial.printf("  topic: %s\n", topic);
       Serial.printf("  qos: %d\n", properties.qos);
       Serial.printf("  dup: %s\n", properties.dup ? "true" : "false");
@@ -417,8 +398,9 @@ void EspClient::_setupOTA()
       Serial.println(F("End Failed"));
     }
   });
+
   ArduinoOTA.begin();
-  Serial.printf("Done OTA setup. IP: %s\n", WiFi.localIP().toString().c_str());
+  Serial.printf("OTA: %s %s\n", settings.otaHost, WiFi.localIP().toString().c_str());
 }
 
 // This will start a webserver allowing user to configure all settings via web.
@@ -429,7 +411,7 @@ void EspClient::_setupOTA()
 //     2. Connect via Family network. Only works when the module is still connected
 //        to the family Wifi router with a valid ip address.
 // parameter: force means force open the portal (even there is no connection issue)
-void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName, char const *apPassword)
+void EspClient::openConfigPortal(bool blocking) //char const *apName, char const *apPassword)
  {
   if(_portalOn)
   {
@@ -440,23 +422,10 @@ void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName
     return;
   }
 
-  #ifdef _DEBUG
-    if(force) Serial.println("Portal force: True.");
-  #endif
-
   _portalOn = true;         // this will enable the pollPortal call in the loop of main.cpp
   _portalSubmitted = false; // will be set to true when the configuration is done in _handleConfigPortal
-  _forcePortal = force;
 
   getSettings();
-
-  // // recorde start time of the force started portal. Used for timeout to close portal
-  if(_forcePortal)
-  {
-    // set timmer to subscribe command topic
-    StensTimer *pTimer = StensTimer::getInstance(); 
-    pTimer->setTimer(this, ACT_CLOSE_PORTAL, 120e3); // default repeatation = 1. Close the portal in 120s
-  }
 
   // use WIFI_AP_STA model such that WiFi reconnecting still going on
   // This is useful when the router is off. Once router is back on
@@ -464,10 +433,18 @@ void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName
 
   // construct ssid name
   char ssid[40];    // this will be used as AP WiFi SSID
-  short ipAddress[4]; // used to save the forw octets of the ipaddress
-  _extractIpAddress(settings.ip, &ipAddress[0]);
-  // return actual bytes written.  If not, compiler will complain with warning
-  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", settings.otaHost, ipAddress[3]);
+  int n;
+  if(_wifiConnected)
+  {
+    short ipAddress[4]; // used to save the forw octets of the ipaddress
+    _extractIpAddress(WiFi.localIP().toString().c_str(), &ipAddress[0]);
+    // return actual bytes written.  If not, compiler will complain with warning
+    n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", settings.otaHost, ipAddress[3]);
+  }else
+  {
+    // return actual bytes written.  If not, compiler will complain with warning
+    n = snprintf(ssid, sizeof(ssid), "ESP-%s", settings.otaHost);
+  }
   if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
 
   WiFi.mode(WIFI_AP_STA);
@@ -478,20 +455,27 @@ void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName
   _webServer.begin();
   MDNS.addService("http", "tcp", 80);
 
-  // Serial.print(ssid);
-  // Serial.print(F(", IP:"));
-  Serial.println(F("-------------------------"));
+  Serial.println(F("---------------------------------------------------"));
   Serial.println(F("Configuration portal on"));
-  Serial.printf("Browse %s for portal, or connect to Wifi \"%s\" and browse %s instead.\n", settings.ip, ssid, WiFi.softAPIP().toString().c_str());
-  Serial.println(F("-------------------------"));
+  if(_wifiConnected)
+    Serial.printf("Browse http://%s/ or %s for portal, or\n", settings.otaHost, WiFi.localIP().toString().c_str());
+  Serial.printf("Connect to Wifi \"%s\" and browse http://%s/ or %s.\n", ssid, settings.otaHost, WiFi.softAPIP().toString().c_str());
+  Serial.println(F("---------------------------------------------------"));
+
+  // set timmer to close portal in 120s
+  StensTimer *pTimer = StensTimer::getInstance(); 
+  pTimer->setTimer(this, ACT_CLOSE_PORTAL, PORTAL_TIMEOUT);
 
   if(blocking)
   {
+    // blocking mode, open untill configuration done!
+    Serial.println(F("Portal open on blocking mode."));
     while(!_portalSubmitted)
     {
-      _handleConfigPortal();
+      // consider just use loop(); or rethink if blocking is really useful?
+      _webServer.handleClient();
+      pTimer->run(); // on blocking mode, need to handle timer logic to check timeout event!
       delay(1000);
-      Serial.println("Blocking handling.");
     } 
     closeConfigPortal();
   }
@@ -499,77 +483,48 @@ void EspClient::openConfigPortal(bool force, bool blocking) //char const *apName
 
 void EspClient::closeConfigPortal()
 {
-    Serial.println(F("Configuration portal completed."));
-
-    // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
-    Serial.println(F("Close AP."));
-    WiFi.softAPdisconnect(true);
-    WiFi.mode(WIFI_STA);
-
-    // // reconnect WiFi if needed
-    // if(!WiFi.isConnected())  WiFi.begin(settings.ssid, settings.pass);
-
-    // // reconnect MQTT broker if needed
-    // if(!mqttClient.connected()) _connectToMqtt();
-    
-    _webServer.stop();
-    MDNS.end();
-    
-    // reset flag
-    _forcePortal = false;
-    _portalOn = false;
-    return;
-}
-
-// A loop to enable the _webServer process client request and will invoke the
-// callback function _handleConfigPortal set above. The loop will be running untill
-// the 'connect' is set to true within _handleConfigPortal when configuration is done.
-//---------------------------------------------------------------------------
-// Stop condition: 1) Configuration form submitted
-//                 2) Portal non-force open, WiFi and MQTT are reconnected
-void EspClient::_handleConfigPortal()
-{
-  if(!_portalOn) return;
-
-  // handle config portal form POST. When it is done, set _portalSubmitted false.
-  _webServer.handleClient();
-
-  if (_portalSubmitted) // Form submitted and handled by _webServer @ _handleConfigPortal()
+  if(!_portalOn)
   {
-    delay(1000); // leave enough time for _handleConfigPortal _webServer.send() to complete before closing softAP mode.
-    Serial.println(F("Configuration portal completed."));
-    closeConfigPortal();
+    #ifdef _DEBUG
+      Serial.println(F("Portal already closed!"));
+    #endif
+
     return;
   }
 
-  // Forced portal will be handled in the timer to close in 2min
-  if(!_forcePortal)
-  {
-    if(_wifiConnected && _mqttConnected)
-    {
-      // both WiFi and MQTT are connected, close the portal
-      Serial.println(F("WiFi & MQTT reconnected. Exit portal."));
-      closeConfigPortal();
-    }
-  }
+  // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
+  Serial.println(F("Close AP."));
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_STA);
+
+  // // reconnect WiFi if needed
+  // if(!WiFi.isConnected())  WiFi.begin(settings.ssid, settings.pass);
+
+  // // reconnect MQTT broker if needed
+  // if(!mqttClient.connected()) _connectToMqtt();
+  
+  _webServer.stop();
+  MDNS.end();
+  
+  // reset flag
+  _portalOn = false;
+
+  Serial.println(F("Configuration portal closed."));
+
+  return;
 }
 
 void EspClient::_handleWebRequest()
 {
   if (_webServer.method() == HTTP_POST)
   {
-    Serial.println("POST received.");
-  
-    _webServer.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title><style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1,p{text-align: center}</style> </head> <body><main class='form-signin'> <h1>Success!</h1> <br/> <p>Your settings have been saved successfully!<br />Device is starting...</p></main></body></html>");
+    // NOTE: no need to close portal specifically, it will timeout to close by timer handling
+    const char htmlSuccess[] = "<html lang='en'><head><meta charset='utf-8'><style>body{font-family:'Segoe UI','Roboto';color:#212529;background-color:#f5f5f5;}h1,p{text-align: center}</style></head><body><main class='form-signin'><h1>Success!</h1><br/><p>Your settings have been saved successfully!<br/>Device is starting...</p></main></body></html>";
+    _webServer.send(200, "text/html", htmlSuccess);
 
     // save configuration received
-    
     if(String("configuration") == _webServer.arg("type"))
     {
-      #ifdef _DEBUG
-        Serial.println(F("Portal configuration submitted."));
-      #endif
-
       strncpy(settings.ssid, _webServer.arg("ssid").c_str(), sizeof(settings.ssid));
       strncpy(settings.pass, _webServer.arg("password").c_str(), sizeof(settings.pass));
       strncpy(settings.ip, _webServer.arg("ip").c_str(), sizeof(settings.ip));
@@ -585,13 +540,16 @@ void EspClient::_handleWebRequest()
       
       _portalSubmitted = true;
 
+      #ifdef _DEBUG
+        Serial.println(F("PORTAL: submitted"));
+      #endif
     }else if(String("restart") == _webServer.arg("type"))
     {
       #ifdef _DEBUG
-        Serial.println(F("Portal restart clicked."));
+        Serial.println(F("PORTAL: Restart"));
       #endif
 
-      ESP.restart();
+      _restart();
     }
     
   } else {
@@ -631,11 +589,24 @@ void EspClient::timerCallback(Timer* timer)
     int action = timer->getAction();
 
     #ifdef _DEBUG
-      Serial.print("timerCallback(), act=");
+      Serial.print("TIMER: ");
     #endif
 
     switch(action)
     {
+      case ACT_WIFI_CONNECT_TIMEOUT:
+        #ifdef _DEBUG
+          Serial.println(F("ACT_WIFI_CONNECT_TIMEOUT"));
+        #endif
+
+        if(_wifiConnected) Serial.println(F("WIFI: connected already!"));
+        else
+        {
+          Serial.println(F("WIFI: not connected, open portal."));
+          openConfigPortal(true); // open portal in blocking mode
+        }
+        break;
+
       case ACT_MQTT_RECONNECT:
         #ifdef _DEBUG
           Serial.println(F("ACT_MQTT_RECONNECT"));
@@ -648,7 +619,7 @@ void EspClient::timerCallback(Timer* timer)
           pTimer->deleteTimer(timer);
 
           #ifdef _DEBUG
-            Serial.println(F("MQTT connected already. Delete timer."));
+            Serial.println(F("MQTT: connected already. Delete timer."));
           #endif
 
           _mqttConnecting = false;
@@ -664,15 +635,8 @@ void EspClient::timerCallback(Timer* timer)
             Serial.println(repetitions);
           }else
           {
-            // reach last one, restart the ESP
-            // TODO: open portal to confirm cfg is right before restart?
-            #ifdef ESP8266
-              ESP.reset();
-            #elif defined(ESP32)
-              ESP.restart();
-            #else
-                #error Platform not supported
-            #endif
+            // reach last one, open config portal
+            openConfigPortal();
           }
         }
         break;
@@ -682,7 +646,8 @@ void EspClient::timerCallback(Timer* timer)
           Serial.println(F("ACT_MQTT_SUBSCRIBE"));
         #endif
 
-        if(_cmdTopic[0] != '\0')
+        // check mqtt connection before subscribe. Sometime it disconnect
+        if(_mqttConnected && _cmdTopic[0] != '\0')
         {
           Serial.print(F("Subscribe command topic: "));
           Serial.println(_cmdTopic);
@@ -697,13 +662,27 @@ void EspClient::timerCallback(Timer* timer)
           Serial.println(F("ACT_CLOSE_PORTAL"));
         #endif
 
-        // time out in 120s (2min)
         Serial.println(F("----------------------------"));
-        Serial.println(F("Portal close on timeout"));
+        Serial.println(F("Portal closed on timeout"));
         Serial.println(F("----------------------------"));
+        
         closeConfigPortal();
+        if(!isConnected()) _restart();
         break;
     }
+}
+
+void EspClient::_restart(RsCode code)
+{
+  Serial.println(F("Restart device."));
+
+  #ifdef ESP8266
+    ESP.reset();
+  #elif defined(ESP32)
+    ESP.restart();
+  #else
+      #error Platform not supported
+  #endif
 }
 
 /*
