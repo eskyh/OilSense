@@ -202,8 +202,6 @@ void EspClient::_connectToWifi(bool blocking)
   }
 }
 
-WiFiEventHandler hWifiGotIp, hWifiDisconnected;
-
 // Try to connect to the MQTT broker and return True if the connection is successfull (blocking)
 void EspClient::_connectToMqttBroker()
 {
@@ -218,9 +216,12 @@ void EspClient::_setupWifi()
     Serial.println("_setupWifi()");
   #endif
 
-  // set up WiFi even handler. Note must save the handler returned, otherwise it will be auto deleted.
-  // see https://github.com/esp8266/Arduino/issues/2545
-  hWifiGotIp = WiFi.onStationModeGotIP([this] (const WiFiEventStationModeGotIP& event) {
+  // Set up WiFi even handler. NOTE:
+  // 1. Must save the handler returned, otherwise it will be auto deleted and won't catch up any events
+  //    see https://github.com/esp8266/Arduino/issues/2545
+  // 2. For labmda function, check diff between [&], [=], [this]
+  //    see https://stackoverflow.com/questions/21105169/is-there-any-difference-betwen-and-in-lambda-functions
+  static WiFiEventHandler hWifiGotIp = WiFi.onStationModeGotIP([&] (const WiFiEventStationModeGotIP& event) {
       Serial.println();
       Serial.println(F("-------------------------------------"));
       Serial.print(F("WiFi connected. IP: "));
@@ -231,7 +232,7 @@ void EspClient::_setupWifi()
       _setupOTA();
     });
 
-  hWifiDisconnected = WiFi.onStationModeDisconnected([this] (const WiFiEventStationModeDisconnected& event) {
+  static WiFiEventHandler hWifiDisconnected = WiFi.onStationModeDisconnected([&] (const WiFiEventStationModeDisconnected& event) {
       Serial.println(F("-------------------"));  
       Serial.println(F("Wi-Fi disconnected"));
       Serial.println(F("-------------------"));
@@ -246,7 +247,7 @@ void EspClient::_setupMQTT()
   #endif
 
   // set the event callback functions
-  mqttClient.onConnect([this](bool sessionPresent) {
+  mqttClient.onConnect([&](bool sessionPresent) {
     _mqttConnected = true;
 
     Serial.println(F("-------------------"));
@@ -261,7 +262,7 @@ void EspClient::_setupMQTT()
     if(_portalOn) closeConfigPortal();
   });
 
-  mqttClient.onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
+  mqttClient.onDisconnect([&](AsyncMqttClientDisconnectReason reason) {
     
     Serial.println(F("----------------------------------------------"));
     Serial.println(F("MQTT: Disconnected"));
@@ -291,27 +292,27 @@ void EspClient::_setupMQTT()
     _mqttConnected = false;
   });
 
-  mqttClient.onSubscribe([this](uint16_t packetId, uint8_t qos) {
+  mqttClient.onSubscribe([&](uint16_t packetId, uint8_t qos) {
     #ifdef _DEBUG
       Serial.printf("Subscribe acknowledged. PacketId: %d, qos: %d\n", packetId, qos);
     #endif
   });
 
-  mqttClient.onUnsubscribe([this](uint16_t packetId) {
+  mqttClient.onUnsubscribe([&](uint16_t packetId) {
     #ifdef _DEBUG
       Serial.print(F("Unsubscribe acknowledged. PacketId: "));
       Serial.println(packetId);
     #endif
   });
 
-  mqttClient.onPublish([this](uint16_t packetId) {
+  mqttClient.onPublish([&](uint16_t packetId) {
     #ifdef _DEBUG
       Serial.print(F("Publish acknowledged. packetId: "));
       Serial.println(packetId);
     #endif
   });
 
-  mqttClient.onMessage([this](char* topic, char* payload,
+  mqttClient.onMessage([&](char* topic, char* payload,
     AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
     
     #ifdef _DEBUG
@@ -555,7 +556,7 @@ void EspClient::_handleWebRequest()
         Serial.println(F("PORTAL: Restart"));
       #endif
 
-      _restart();
+      _restart(RsCode::RS_CFG_CHANGE);
     }
     
   } else {
@@ -673,14 +674,15 @@ void EspClient::timerCallback(Timer* timer)
         Serial.println(F("----------------------------"));
         
         closeConfigPortal();
-        if(!isConnected()) _restart();
+        if(!isConnected()) _restart(RsCode::RS_DISCONNECT);
         break;
     }
 }
 
 void EspClient::_restart(RsCode code)
 {
-  Serial.println(F("Restart device."));
+  Serial.print(F("Restart device, code: "));
+  Serial.println(code);
 
   #ifdef ESP8266
     ESP.reset();
