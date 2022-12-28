@@ -40,7 +40,7 @@ struct Settings {
     mqttPass[0] = '\0';
     
     // otaHost[0] = '\0';
-		snprintf(otaHost, sizeof(otaHost), "ESP-%d", ESP.getChipId()); // initialize the otaHost name
+		snprintf(otaHost, sizeof(otaHost), "%d", ESP.getChipId()); // initialize the otaHost name
     otaPass[0] = '\0';
     CRC = 0;
   }
