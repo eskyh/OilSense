@@ -17,11 +17,11 @@
 #define CMD_SSR_FILTER  PRJNAME"/cmd/filter"
 
 #define CMD_SSR_SR04    PRJNAME"/cmd/sr04"
-// #define CMD_SSR_VL53    PRJNAME"/cmd/vl53"
+#define CMD_SSR_VL53    PRJNAME"/cmd/vl53"
 #define CMD_SSR_DH11    PRJNAME"/cmd/dh11"
 
 #define MQTT_PUB_SR04   PRJNAME"/sensor/sr04"
-// #define MQTT_PUB_VL53   PRJNAME"/sensor/vl53"
+#define MQTT_PUB_VL53   PRJNAME"/sensor/vl53"
 #define MQTT_PUB_DH11   PRJNAME"/sensor/dh11"
 
 #define MQTT_PUB_HEARTBEAT  PRJNAME"/heartbeat"
