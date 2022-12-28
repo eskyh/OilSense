@@ -33,7 +33,7 @@ void EspClient::setup(CommandHandler cmdHandler, const char* cmdTopic)
     openConfigPortal(true);
   }
 
-  _setupWifi(); // _setupOTA is done in _handleWifi() when Wifi is connected
+  _setupWifi();
   _setupMQTT();
 
   _connectToWifi(true); // blocking mode
@@ -45,8 +45,6 @@ void EspClient::loop()
   // let StensTimer do it's magic every time loop() is executed
   pTimer->run();
 
-  // static bool setup = false;
-
   // A loop to enable the _webServer process client request 
   if(_portalOn) _webServer.handleClient();
 
@@ -55,7 +53,6 @@ void EspClient::loop()
   {
     // Do nothing else as ESP WiFi module take care of reconnecting (configured in _connectToWifi())
     return;
-
   }else
   {
     #ifdef ESP8266
@@ -74,7 +71,6 @@ void EspClient::loop()
     // Some people have reported instabilities when trying to connect to 
     // the mqtt broker right after being connected to wifi.
     // This delay prevent these instabilities.
-    // _nextMqttConnectionAttemptMillis = millis() + 500;
 
     // set timmer to connect MQTT broker
     // At least 500 miliseconds of waiting before an mqtt connection attempt.
@@ -231,6 +227,8 @@ void EspClient::_setupWifi()
       Serial.println(WiFi.localIP().toString().c_str());
       Serial.println(F("-------------------------------------"));
       _wifiConnected = true;
+
+      _setupOTA();
     });
 
   hWifiDisconnected = WiFi.onStationModeDisconnected([this] (const WiFiEventStationModeDisconnected& event) {
@@ -351,9 +349,14 @@ void EspClient::setCommandHandler(CommandHandler cmdHandler, const char* cmdTopi
   strncpy(_cmdTopic, cmdTopic, sizeof(_cmdTopic));
 }
 
-// Do this after Wifi is connected
+// Do this after Wifi is connected!!
+// This is called in WiFi connected callback set in _setupWifi()
 void EspClient::_setupOTA()
 {
+  #ifdef _DEBUG
+    Serial.println("_setupOTA()");
+  #endif
+
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
 
@@ -400,7 +403,8 @@ void EspClient::_setupOTA()
   });
 
   ArduinoOTA.begin();
-  Serial.printf("OTA: %s %s\n", settings.otaHost, WiFi.localIP().toString().c_str());
+  // Serial.println("OTA: setup");
+  Serial.printf("OTA: %s @ %s\n", settings.otaHost, WiFi.localIP().toString().c_str());
 }
 
 // This will start a webserver allowing user to configure all settings via web.
