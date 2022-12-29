@@ -11,7 +11,10 @@
 class Sensor
 {
   public:
-		Sensor(const char* name, int nMeasures=1, FilterType filter=None);
+		Sensor(const char* sensorName, int nMeasures=1, FilterType filter=None);
+
+    void enable(bool enable) {_enabled = enable;};
+    bool isEnabled() {return _enabled;};
 
     // Returns the measurement in an array (in cm)
     bool measure();
@@ -22,10 +25,10 @@ class Sensor
     void sendMeasure();
 		virtual char* getPayload() = 0;
 		virtual ~Sensor();
-      
+
+    char name[25]; // sensor name
+
   protected:
-		char _name[25]; // sensor name
-	
     // MQTT parameters
     AsyncMqttClient* _pMqttClient = NULL;
     
@@ -42,4 +45,7 @@ class Sensor
 		int _nMeasures; 		
 		float *_measures = NULL; // save final measures. Filter processed measures are saved in here. Length: _nMeasures
     Filter** _filters = NULL;
+
+  private:
+    bool _enabled = true;
 };

@@ -1,6 +1,6 @@
 #include "sr04.hpp"
 
-SR04::SR04(const char* name, int triggerPin, int echoPin)
+SR04::SR04(const char* name, uint8_t triggerPin, uint8_t echoPin)
 	 : Sensor(name, 1, Median)
 {
   _triggerPin = triggerPin;
@@ -58,5 +58,6 @@ bool SR04::_read()
   soundSpeed = 331300 + 606 * airTemp; //  mm/s
   _measures[0] = soundSpeed*duration/2e7; //cm // Speed of sound wave divided by 2 (go and back)
   // Serial.println(_lastReadings[0][_index]);
-  return true;
+
+  return _measures[0] > 1e-3; // must be something, otherwise it is not connected
 }

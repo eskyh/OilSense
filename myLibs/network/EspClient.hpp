@@ -1,7 +1,11 @@
 #pragma once
 
-// #include <PubSubClient.h>
-//#include <vector>
+#include <Arduino.h>
+#include <AsyncMqttClient.h>
+
+#include "StensTimer.h"
+#include "sensor.hpp"
+#include "Config.hpp"
 
 #ifdef ESP8266
   #include <ESP8266WiFi.h>
@@ -28,17 +32,39 @@
     #error Platform not supported
 #endif
 
-#include <ArduinoOTA.h>
-#include <AsyncMqttClient.h>
-#include <CRC32.h>
+//----------------------
+#define MQTT_SUB_CMD 	"/cmd/#"
 
-#include "StensTimer.h"
-#include "Settings.hpp"
+#define CMD_OPEN_PORTAL "/cmd/portal"     // this is not sent from MQTT, instead sent from wifi module when there is connection issues!!
+
+#define CMD_SLEEP       "/cmd/sleep"
+#define CMD_LED_BLINK   "/cmd/ledblink"
+#define CMD_AUTO        "/cmd/auto"       // auto or manual mode for measurement
+#define CMD_MEASURE     "/cmd/measure"
+#define CMD_INTERVAL    "/cmd/interval"
+#define CMD_RESTART     "/cmd/restart"
+#define CMD_SSR_FILTER  "/cmd/filter"
+
+// #define CMD_SSR_SR04    "/cmd/on/sr04"  // turn on/off the measure
+// #define CMD_SSR_VL53    "/cmd/on/vl53"
+// #define CMD_SSR_DH11    "/cmd/on/dh11"
+
+// #define MQTT_PUB_SR04   "/sensor/sr04"
+// #define MQTT_PUB_VL53   "/sensor/vl53"
+// #define MQTT_PUB_DH11   "/sensor/dh11"
+
+#define MQTT_PUB_HEARTBEAT  "/heartbeat"
+
+// #define MQTT_PUB_INFO       "/msg/info"
+// #define MQTT_PUB_WARN       "/msg/warn"
+// #define MQTT_PUB_ERROR      "/msg/error"
+//----------------------
+
 
 #define MQTT_MAX_TRY             15     // Max number of MQTT connect tries before ask for turn on portal
 #define MQTT_RECONNECT_INTERVAL  2e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_SUBSCRIBE_DELAY     1e3    // MQTT subscribe attempt delay after connected
-#define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout
+#define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout, 20s bu default
 #define PORTAL_TIMEOUT           120e3  // Configuration portal timeout
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
@@ -63,22 +89,22 @@ class EspClient : public IStensTimerListener
     void closeConfigPortal();
 
     // must called before loop(), therefore in the setup() in main program
-    void setCommandHandler(CommandHandler cmdHandler, const char* cmdTopic); 
+    // void setCommandHandler(CommandHandler cmdHandler, const char* cmdTopic); 
 
-    void setup(CommandHandler cmdHandler, const char* cmdTopic);
+    void setup();
     void loop(); // Main loop, to call at each sketch loop()
 
     virtual void timerCallback(Timer* timer);
 
   protected:
+    // std::vector<Sensor> sensors;
+
     // Settings
-    Settings settings;
-    bool getSettings();
-    void saveSettings();
+    // Settings settings;
 
   private:
     // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return
-    EspClient();
+    EspClient() {};
     EspClient(const EspClient&) = delete; // deleting copy constructor.
     EspClient& operator=(const EspClient&) = delete; // deleting copy operator.
 
@@ -93,14 +119,11 @@ class EspClient : public IStensTimerListener
 
     void _restart(RsCode code=RS_NORMAL);  // restart the device
 
-    bool _mqttCleanSession;
+    // bool _mqttCleanSession;
     // char* _mqttLastWillTopic;
     // char* _mqttLastWillMessage;
     // bool _mqttLastWillRetain;
     // unsigned int _failedMQTTConnectionAttemptCount;
-
-    CommandHandler _cmdHandler;     // command handler function for command from either wifi module or mqtt command
-    char _cmdTopic[25];             // save the mqtt command topic set by autoConnect()
 
   private:
     // Config ortal related
@@ -117,21 +140,38 @@ class EspClient : public IStensTimerListener
     void _setupWifi();
 
     // MQTT related
+    Timer *_pTimerReconnect = NULL;
     bool _mqttConnected = false;
-    bool _mqttConnecting = false;    // indicate the timer to reconnect is set, but not connected yet.
     void _setupMQTT();
     void _setupOTA();
 
     void _connectToWifi(bool blocking=false);
     void _connectToMqttBroker();
 
+    void _cmdHandler(const char* topic, const char* payload);
+
     // Timer action IDs
     enum {
+      ACT_HEARTBEAT,  // heartbeat
+      ACT_MEASURE,     // sensor measure timer
       ACT_WIFI_CONNECT_TIMEOUT,  // wait for WIFI connect time out
       ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
       ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
       ACT_CLOSE_PORTAL          // Config portal open time out (i.e., 120s after open)
     };
+
+    // Sensors
+    bool _ledBlink = true;
+    bool _autoMode = true;
+    Timer* _timer_sensor = NULL; // timer to control measure interval
+    Sensor *_sensors[MAX_SENSORS] = {NULL}; // initialized all with NULL
+    void _initSensors();
+    void _enableSensor(const char* name, bool enable);
+    void _measure();
+    void _blink();
+
+    // message buffer
+    // char _msgQueue[10][2][25]; // 10 msgs, each message includes 2 strings max 25 length
 
     // Utility functions
     static void _extractIpAddress(const char* sourceString, short* ipAddress);

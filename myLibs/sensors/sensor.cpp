@@ -1,16 +1,13 @@
-// #define DEBUG
-
 #include "sensor.hpp"
 #include "filter.hpp"
-#include "EspClient.hpp"
 
 // name: sensor name
 // nMeasures: number of measures a sensor can generator (some sensor integrates multiple type of measures)
-Sensor::Sensor(const char* name, int nMeasures, FilterType filter)
+Sensor::Sensor(const char* sensorName, int nMeasures, FilterType filter)
 {
   // sizeof: Returns the length of the given byte string, include null terminator;
   // strlen: Returns the length of the given byte string not including null terminator;
-  strncpy(_name, name, sizeof(_name));
+  strncpy(name, sensorName, sizeof(name));
 	_nMeasures = nMeasures;
 
   // init the filter pointer array
@@ -87,22 +84,16 @@ void Sensor::setMqtt(AsyncMqttClient *pClient, const char* topic, int qos, bool 
 
 void Sensor::sendMeasure()
 {
-	// do not do anything if not connected to network
-	if(!EspClient::instance().isConnected()) return;
+	// do not do anything if disabled or not connected to network
+	if(!_enabled || _pMqttClient == NULL || !_pMqttClient->connected()) return;
 
-  if (_pMqttClient == NULL)
-  {
-    Serial.println(F("MQTT client is not set!"));
-    return;
-  }
-  
   // format the payload. Avoid using String!!
   // _timestamp = time(NULL); // get current timestamp (in sec), convert it to millisec below
   
   // Accuracy only to 1mm. so output to 1 decimal place.
   if(!measure())
   {
-    Serial.printf("%s: measure failed!\n", _name);
+    Serial.printf("%s: measure failed!\n", name);
     return;
   }
 	
@@ -110,14 +101,14 @@ void Sensor::sendMeasure()
   _pMqttClient->publish(_topic, _qos, _retain, payload); // retain will clear the chart when deploying!! set it to false
 
   #ifdef _DEBUG
-		Serial.printf("%s: %s\n", _name, payload);
+		Serial.printf("%s: %s\n", _topic, payload); //name, _topic, payload);
   #endif
 }
 
 // return measure in cm
 bool Sensor::measure() 
 {
-  if(!_read()) return false;
+	if(!_enabled || !_read()) return false;
 
   for(int i=0; i<_nMeasures; i++)
   {

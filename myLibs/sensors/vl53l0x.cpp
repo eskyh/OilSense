@@ -27,19 +27,24 @@ char* VL53L0X::getPayload()
 // Measure distance in mm
 bool VL53L0X::_read()
 {
-  if(!_ready) _measures[0] = 0;
-  
-  VL53L0X_RangingMeasurementData_t measure;
-  _lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-  
-  if (measure.RangeStatus != 4) {  // phase failures have incorrect data
-    _measures[0] = measure.RangeMilliMeter/10.0;
-    return true;
+  bool res = false;
+
+  if(_ready)
+  {
+    VL53L0X_RangingMeasurementData_t measure;
+    _lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
+    
+    if (measure.RangeStatus != 4)
+    {  // phase failures have incorrect data
+      _measures[0] = measure.RangeMilliMeter/10.0;
+      res = true;
+    }
+    else {
+      #ifdef DEBUG
+        Serial.printf("%s: out of range.\n", _name);
+      #endif
+    }
   }
-  else {
-		#ifdef DEBUG
-      Serial.printf("%s: out of range.\n", _name);
-		#endif
-    return false;
-  }  
+
+  return res;
 }

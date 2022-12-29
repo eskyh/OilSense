@@ -8,13 +8,13 @@
 class SR04 : public Sensor
 {
   public:
-    SR04(const char* name, int triggerPin, int echoPin);
+    SR04(const char* name, uint8_t triggerPin, uint8_t echoPin);
     virtual char* getPayload();
       
   private:
     // sensor
-    int _triggerPin;
-    int _echoPin;
+    uint8_t _triggerPin;
+    uint8_t _echoPin;
     
     virtual bool _read();
 };
