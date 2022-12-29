@@ -1,5 +1,6 @@
 #pragma once
 
+#include <EEPROM.h>
 #include <CRC32.h>
 
 // Module configuration data structure in flash
@@ -16,8 +17,11 @@ struct Settings {
   char mqttPass[15];
 
   // OTA host name and pass
-  char otaHost[40]; // this is also use as mqtt client name when needed
+  char otaHost[40]; // this is also use as mqtt client name
   char otaPass[15];
+
+  // Sensor config
+  char sensors[40];
 
   // CRC used to check if the data is valid
   uint32_t CRC;
@@ -44,6 +48,50 @@ struct Settings {
     otaPass[0] = '\0';
     CRC = 0;
   }
+
+  // use CRC to check EEPROM data
+  // https://community.particle.io/t/determine-empty-location-with-eeprom-get-function/18869/12
+  // bool getSettings()
+  // {
+  //     static bool valid = false; // record if the settings member varaible is valid
+
+  //     if(!valid)
+  //     {
+  //         EEPROM.begin(sizeof(struct Settings));
+  //         EEPROM.get(0, settings);
+
+  //         uint32_t checksum = CRC32::calculate((uint8_t *)&settings, sizeof(settings)-sizeof(settings.CRC));
+  //         valid = settings.CRC == checksum;
+
+  //         // if CRC check fail, the data retrieved to settings are garbage, reset it.
+  //         if(!valid)
+  //         {
+  //             settings.reset();
+  //             Serial.println(F("Settings not initialized..."));
+  //         }else
+  //         {
+  //         #ifdef _DEBUG
+  //             Serial.println(F("\nCRC matched. Valid settings retrieved."));
+  //             settings.print();
+  //         #endif
+  //         }
+  //     }
+
+  //     return valid;
+  // }
+
+  // void saveSettings()
+  // {
+  //   #ifdef _DEBUG
+  //     Serial.println("Save settins to EEPROM.");
+  //   #endif
+
+  //   settings.CRC = CRC32::calculate((uint8_t *)&settings, sizeof(settings)-sizeof(settings.CRC));
+
+  //   EEPROM.begin(sizeof(struct Settings));
+  //   EEPROM.put(0, settings);
+  //   EEPROM.commit();
+  // }
 
 #ifdef _DEBUG
   void print()
