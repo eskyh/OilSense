@@ -7,9 +7,11 @@
 #include "sensor.hpp"
 #include "Config.hpp"
 
+#include "ESPAsyncWebServer.h"
+
 #ifdef ESP8266
   #include <ESP8266WiFi.h>
-  #include <ESP8266WebServer.h>
+  // #include <ESP8266WebServer.h>
   // #include <ESP8266mDNS.h>
   // #include <ESP8266HTTPUpdateServer.h>
 
@@ -21,7 +23,7 @@
 
 #elif defined(ESP32)
   #include <WiFiClient.h>
-  #include <WebServer.h>
+  // #include <WebServer.h>
   // #include <ESPmDNS.h>
   // #include "ESP32HTTPUpdateServer.h"
 
@@ -131,8 +133,9 @@ class EspClient : public IStensTimerListener
     bool _portalSubmitted = false;  // The configuration form submitted
     char _portalReason[50];         // reason of open portal (Not used at this moment.)
 
-    WebServer _webServer = WebServer(80);
-    void _handleWebRequest();
+    // WebServer _webServer = WebServer(80);
+    AsyncWebServer _webServer = AsyncWebServer(80);
+    // void _handleWebRequest();
 
     // WiFi related
     bool _wifiConnected = false;

@@ -1,0 +1,222 @@
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+  </head> 
+  <body class='form-signin'>
+		<form action='/' method='post'>
+			<input type='hidden' name='type' value='configuration'>
+			<h1 class=''>Device Setup
+			</h1>
+			<p style='color: red;'>%PORTAL_REASON%
+			</p>
+			<div>Module:
+				<input class='form-control' name='module' type='text' value='%MODULE%' />
+			</div>
+			<hr>
+			<b>NETWORK:</b>
+			<div>SSID:
+				<input class='form-control' name='ssid' type='text' value='%WIFI_SSID%' />
+			</div>
+			<div>Pass:
+				<input class='form-control' name='password' value='%WIFI_PASS%' />
+			</div>
+			<div>Static IP:
+				<input class='form-control' name='ip' value='%IP%' />
+			</div>
+			<hr>
+			<b>MQTT:</b>
+			<div>Host:
+				<input class='form-control' name='mqttServer' type='text' value='%MQTT_SERVER%' />
+			</div>
+			<div>Port:
+				<input class='form-control' name='mqttPort' type='text' value='%MQTT_PORT%' />
+			</div>
+			<div>User:
+				<input class='form-control' name='mqttUser' type='text' value='%MQTT_USER%' />
+			</div>
+			<div>Pass:
+				<input class='form-control' name='mqttPass' value='%MQTT_PASS%' />
+			</div>
+			<b>OTA:</b>
+			<div>Pass:
+				<input class='form-control' name='otaPass' value='%OTA_PASS%' />
+			</div>
+			<hr>
+			<b>SENSORS:</b>
+			<div><i><b>Sensor0:</b></i><br/>
+				Name:
+				<input class='form-control' name='s0_name' value='%S0_NAME%' />
+				Type:
+				<select class='form-control' name='S0_TYPE'>
+					<option value='HC-SR04'>HC-SR04, ultrasound distance sensor [pinTrig, pinEcho]</option>
+					<option value='DHT11'>DHT11, temperature, humility sensor [pinData]</option>
+					<option value='VL53L0X'>VL53L0X, laser distance sensor</option>
+				</select>
+				Pin0:
+				<select class='form-control' name='S0_PIN0' id='S0_PIN0'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+				Pin1:
+				<select class='form-control' name='S0_PIN1' id='S0_PIN1'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+				Pin2:
+				<select class='form-control' name='S0_PIN2' id='S0_PIN2'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+			</div>
+			<div><i><b>Sensor1:</b></i><br/>
+				Name:
+				<input class='form-control' name='s1_name' value='%S1_NAME%' />
+				Type:
+				<select class='form-control' name='S1_TYPE'>
+					<option value='HC-SR04'>HC-SR04, ultrasound distance sensor [pinTrig, pinEcho]</option>
+					<option value='DHT11' selected>DHT11, temperature, humility sensor [pinData]</option>
+					<option value='VL53L0X'>VL53L0X, laser distance sensor</option>
+				</select>
+				Pin0:
+				<select class='form-control' name='S1_PIN0' id='S1_PIN0'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+				Pin1:
+				<select class='form-control' name='S1_PIN1' id='S1_PIN1'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+				Pin2:
+				<select class='form-control' name='S1_PIN2' id='S1_PIN2'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+			</div>
+			<div><i><b>Sensor2:</b></i><br/>
+				Name:
+				<input class='form-control' name='s2_name' value='%S2_NAME%' />
+				Type:
+				<select class='form-control' name='S2_TYPE'>
+					<option value='HC-SR04'>HC-SR04, ultrasound distance sensor [pinTrig, pinEcho]</option>
+					<option value='DHT11'>DHT11, temperature, humility sensor [pinData]</option>
+					<option value='VL53L0X' selected>VL53L0X, laser distance sensor</option>
+				</select>
+				Pin0:
+				<select class='form-control' name='S2_PIN0' id='S2_PIN0'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+				Pin1:
+				<select class='form-control' name='S2_PIN1' id='S2_PIN1'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+				Pin2:
+				<select class='form-control' name='S2_PIN2' id='S2_PIN2'>
+					<option value=''></option>
+					<option value='D1'>D1</option>
+					<option value='D2'>D2</option>
+					<option value='D3'>D3</option>
+					<option value='D4'>D4</option>
+					<option value='D5'>D5</option>
+					<option value='D6'>D6</option>
+					<option value='D7'>D7</option>
+					<option value='D8'>D8</option>
+					<option value='RX'>RX</option>
+					<option value='TX'>TX</option>
+				</select>
+			</div>			
+			<br/>
+			<button type='submit'>Save</button>
+		</form>
+		<hr>
+		<form action='/' method='post'>
+			<input type='hidden' name='type' value='restart'>
+			<button type='submit'>Restart</button>
+		</form>
+		<script>
+			document.getElementById('S0_PIN0').value = '%S0_PIN0%';
+			document.getElementById('S0_PIN1').value = '%S0_PIN1%';
+			document.getElementById('S0_PIN2').value = '%S0_PIN2%';
+			document.getElementById('S1_PIN0').value = '%S1_PIN0%';
+			document.getElementById('S1_PIN1').value = '%S1_PIN1%';
+			document.getElementById('S1_PIN2').value = '%S1_PIN2%';
+			document.getElementById('S2_PIN0').value = '%S2_PIN0%';
+			document.getElementById('S2_PIN1').value = '%S2_PIN1%';
+			document.getElementById('S2_PIN2').value = '%S2_PIN2%';
+		</script>
+  </body>
+</html>

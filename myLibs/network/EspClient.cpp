@@ -2,6 +2,8 @@
 #include "EspClient.hpp"
 
 #include <ArduinoOTA.h>
+#include <FS.h>
+#include "LittleFS.h"
 
 #include "sr04.hpp"
 #include "dht11.hpp"
@@ -82,20 +84,17 @@ void EspClient::loop()
   // let StensTimer do it's magic every time loop() is executed
   pTimer->run();
 
-  // A loop to enable the _webServer process client request 
-  if(_portalOn) _webServer.handleClient();
+  // // A loop to enable the _webServer process client request 
+  // if(_portalOn) _webServer.handleClient();
 
   // Wifi handling
   if(!_wifiConnected)
   {
     // Do nothing else as ESP WiFi module take care of reconnecting (configured in _connectToWifi())
     return;
+
   }else
   {
-    // #ifdef ESP8266
-    //   MDNS.update(); // We need to do this only for ESP8266
-    // #endif
-
     ArduinoOTA.handle();
   }
 
@@ -358,15 +357,13 @@ void EspClient::_setupMQTT()
     // snprintf(_msgQueue[h][2], min(len+1, (size_t)sizeof(_msgQueue[h][2])), "%s", payload);
     // h = h++ % nsize;
 
-
     // -----------------------------------------------------------------------------------------
     // NOTE: onMessage callback is hadware interuption triggered, if the _cmdHandler is not done yet, can cause
     // buffer mess and crash!! so do not do heavy work in _cmdHandler!!
 
-    // Command payload is usually short, 20 is enough.
     // Reason to make a copy: https://github.com/marvinroger/async-mqtt-client/issues/42
-    static char buffer[20];
-     // copies at most size-1 non-null characters from src to dest and adds a null terminator
+    static char buffer[20]; // Command payload is usually short, 20 is enough.
+    // copies at most size-1 non-null characters from src to dest and adds a null terminator
     snprintf(buffer, min(len+1, (size_t)sizeof(buffer)), "%s", payload);
 
     int size = strlen(cfg.module);
@@ -380,28 +377,16 @@ void EspClient::_setupMQTT()
   mqttClient.setCredentials(cfg.mqttUser, cfg.mqttPass);
 }
 
-// void EspClient::setCommandHandler(CommandHandler cmdHandler, const char* cmdTopic)
-// {
-//   // set up cmdHandler and cmdTopic
-//   // do this before anything else, as turn on portal cmd will be send to cmdHandler if there is connection issue
-//   _cmdHandler = cmdHandler;
-//   strncpy(_cmdTopic, cmdTopic, sizeof(_cmdTopic));
-// }
-
-// Do this after Wifi is connected!!
 // This is called in WiFi connected callback set in _setupWifi()
+// NOTE: 1. Must do this after Wifi got IP address. Otherwise, won't work!
+//       2. OTA is using mDNS, so no need to set mDNS specifically
 void EspClient::_setupOTA()
 {
   #ifdef _DEBUG
     Serial.println("_setupOTA()");
   #endif
 
-  // -- OTA is using mDNS, so no need to begin mDNS specifically
-  // Start mDNS
-  // if(MDNS.begin(cfg.module)) Serial.println("MDNS: started");
-  // MDNS.addService("http", "tcp", 80);
-
-  // Port defaults to 8266
+  // OTA port defaults to 8266
   // ArduinoOTA.setPort(8266);
 
   // Hostname defaults to esp8266-[ChipID]
@@ -425,30 +410,50 @@ void EspClient::_setupOTA()
     // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
+
   ArduinoOTA.onEnd([]() {
     Serial.println(F("\nEnd"));
   });
+
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
+
   ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) {
-      Serial.println(F("Auth Failed"));
-    } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println(F("Begin Failed"));
-    } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println(F("Connect Failed"));
-    } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println(F("Receive Failed"));
-    } else if (error == OTA_END_ERROR) {
-      Serial.println(F("End Failed"));
-    }
+    Serial.printf("OTA: Error[%u]: ", error);
+
+    #ifdef _DEBUG
+      if (error == OTA_AUTH_ERROR) {
+        Serial.println(F("Auth Failed"));
+      } else if (error == OTA_BEGIN_ERROR) {
+        Serial.println(F("Begin Failed"));
+      } else if (error == OTA_CONNECT_ERROR) {
+        Serial.println(F("Connect Failed"));
+      } else if (error == OTA_RECEIVE_ERROR) {
+        Serial.println(F("Receive Failed"));
+      } else if (error == OTA_END_ERROR) {
+        Serial.println(F("End Failed"));
+      }
+    #endif
   });
 
   ArduinoOTA.begin();
-  // Serial.println("OTA: setup");
   Serial.printf("OTA: %s @ %s\n", cfg.module, WiFi.localIP().toString().c_str());
+}
+
+String processor(const String& var){
+  // Serial.println(var);
+  // if(var == "GPIO_STATE"){
+  //   if(digitalRead(ledPin)){
+  //     ledState = "OFF";
+  //   }
+  //   else{
+  //     ledState = "ON";
+  //   }
+  //   Serial.print(ledState);
+  //   return ledState;
+  // }
+  return String("Haha");
 }
 
 // This will start a webserver allowing user to configure all settings via web.
@@ -500,13 +505,105 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(ssid, NULL); // apPassword);
   
-  _webServer.on("/",  std::bind(&EspClient::_handleWebRequest, this)); // bind is to make class function as static callback
+  // Setting web server
+  // refer: https://microcontrollerslab.com/esp8266-nodemcu-web-server-using-littlefs-flash-file-system/
+  // _webServer.on("/",  std::bind(&EspClient::_handleWebRequest, this)); // bind is to make class function as static callback
+
+    // Route for root / web page
+  _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(LittleFS, "/index.html", String(), false, [](const String& var){
+      Serial.println(var);
+      if(var == "MODULE") return String(cfg.module);
+      else if(var == "WIFI_SSID") return String(cfg.ssid);
+      else if(var == "WIFI_PASS") return String(cfg.pass);
+      else if(var == "IP") return String(cfg.ip);
+      else if(var == "MQTT_SERVER") return String(cfg.mqttServer);
+      else if(var == "MQTT_PORT") return String(cfg.mqttPort);
+      else if(var == "MQTT_USER") return String(cfg.mqttUser);
+      else if(var == "MQTT_PASS") return String(cfg.mqttPass);
+      else if(var == "OTA_PASS") return String(cfg.otaPass);
+      else if(var == "S0_NAME") return String(cfg.sensors[0].name);
+      else if(var == "S0_PIN0") return String(cfg.nameByPin(cfg.sensors[0].pin0));
+      else if(var == "S0_PIN1") return String(cfg.nameByPin(cfg.sensors[0].pin1));
+      else if(var == "S0_PIN2") return String(cfg.nameByPin(cfg.sensors[0].pin2));
+      else if(var == "S1_NAME") return String(cfg.sensors[1].name);
+      else if(var == "S1_PIN0") return String(cfg.nameByPin(cfg.sensors[1].pin0));
+      else if(var == "S1_PIN1") return String(cfg.nameByPin(cfg.sensors[1].pin1));
+      else if(var == "S1_PIN2") return String(cfg.nameByPin(cfg.sensors[1].pin2));
+      else if(var == "S2_NAME") return String(cfg.sensors[2].name);
+      else if(var == "S2_PIN0") return String(cfg.nameByPin(cfg.sensors[2].pin0));
+      else if(var == "S2_PIN1") return String(cfg.nameByPin(cfg.sensors[2].pin1));
+      else if(var == "S2_PIN2") return String(cfg.nameByPin(cfg.sensors[2].pin2));
+      else return String();
+    });
+  });
+
+  // Route to load style.css file
+  _webServer.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(LittleFS, "/style.css", "text/css");
+  });
+
+  // _webServer.on("/", HTTP_POST, [&](AsyncWebServerRequest *request){
+  //   Serial.println(request->contentType());
+    
+  //   String msg;
+  //   int params = request->params();
+  //   Serial.printf("%d params sent in\n", params);
+    
+  //   for (int i = 0; i < params; i++)
+  //   {
+  //       // AsyncWebParameter *p = request->getParam(i);
+  //       // if (p->isFile())
+  //       // {
+  //       //     Serial.printf("_FILE[%s]: %s, size: %u", p->name().c_str(), p->value().c_str(), p->size());
+  //       // }
+  //       // else if (p->isPost())
+  //       // {
+  //       //     Serial.printf("%s: %s \n", p->name().c_str(), p->value().c_str());
+  //       // }
+  //       // else
+  //       // {
+  //       //     Serial.printf("_GET[%s]: %s", p->name().c_str(), p->value().c_str());
+  //       // }
+
+
+        
+  //       if(request->hasParam("module"))
+  //       {
+  //         msg = request->getParam("module")->value();
+  //         Serial.printf("module:%s", msg.c_str());
+  //       }
+
+  //       if(request->hasParam("ssid"))
+  //       {
+  //         msg = request->getParam("ssid")->value();
+  //         Serial.printf("ssid:%s", msg.c_str());
+  //       }
+
+  //       if(request->hasParam("password"))
+  //       {
+  //         msg = request->getParam("password")->value();
+  //         Serial.printf("password:%s", msg.c_str());
+  //       }
+
+  //     // strncpy(cfg.module, _webServer.arg("module").c_str(), sizeof(cfg.module));
+  //     // strncpy(cfg.ssid, _webServer.arg("ssid").c_str(), sizeof(cfg.ssid));
+  //     // strncpy(cfg.pass, _webServer.arg("password").c_str(), sizeof(cfg.pass));
+  //     // strncpy(cfg.ip, _webServer.arg("ip").c_str(), sizeof(cfg.ip));
+
+  //     // strncpy(cfg.mqttServer, _webServer.arg("mqttServer").c_str(), sizeof(cfg.mqttServer));
+  //     // cfg.mqttPort = atoi(_webServer.arg("mqttPort").c_str());
+  //     // strncpy(cfg.mqttUser, _webServer.arg("mqttUser").c_str(), sizeof(cfg.mqttUser));
+  //     // strncpy(cfg.mqttPass, _webServer.arg("mqttPass").c_str(), sizeof(cfg.mqttPass));
+  //     // strncpy(cfg.otaPass, _webServer.arg("otaPass").c_str(), sizeof(cfg.otaPass));
+  //   }
+  // });
+
   _webServer.begin();
 
   Serial.println(F("---------------------------------------------------"));
-  Serial.println(F("Configuration portal on"));
-  if(_wifiConnected)
-    Serial.printf("Browse http://%s/ or %s for portal, or\n", cfg.module, WiFi.localIP().toString().c_str());
+  Serial.println(F("Config portal on:"));
+  if(_wifiConnected) Serial.printf("Browse http://%s/ or %s for portal, or\n", cfg.module, WiFi.localIP().toString().c_str());
   Serial.printf("Connect to Wifi \"%s\" and browse http://%s/ or %s.\n", ssid, cfg.module, WiFi.softAPIP().toString().c_str());
   Serial.println(F("---------------------------------------------------"));
 
@@ -521,7 +618,7 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
     while(!_portalSubmitted)
     {
       // consider just use loop(); or rethink if blocking is really useful?
-      _webServer.handleClient();
+      // _webServer.handleClient();
       pTimer->run(); // on blocking mode, need to handle timer logic to check timeout event!
       delay(1000);
     } 
@@ -545,90 +642,83 @@ void EspClient::closeConfigPortal()
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_STA);
 
-  // // reconnect WiFi if needed
-  // if(!WiFi.isConnected())  WiFi.begin(cfg.ssid, cfg.pass);
+  // _webServer.stop();
+  _webServer.end();
+  _portalOn = false; // reset flag
 
-  // // reconnect MQTT broker if needed
-  // if(!mqttClient.connected()) _connectToMqtt();
-  
-  _webServer.stop();
-  
-  // reset flag
-  _portalOn = false;
-
-  Serial.println(F("Configuration portal closed."));
+  Serial.println(F("Config portal closed"));
 
   return;
 }
 
-void EspClient::_handleWebRequest()
-{
-  if (_webServer.method() == HTTP_POST)
-  {
-    // NOTE: no need to close portal specifically, it will timeout to close by timer handling
-    const char htmlSuccess[] = "<html lang='en'><head><meta charset='utf-8'><style>body{font-family:'Segoe UI','Roboto';color:#212529;background-color:#f5f5f5;}h1,p{text-align: center}</style></head><body><main class='form-signin'><h1>Success!</h1><br/><p>Your settings have been saved successfully!<br/>Device is starting...</p></main></body></html>";
-    _webServer.send(200, "text/html", htmlSuccess);
+// void EspClient::_handleWebRequest()
+// {
+//   if (_webServer.method() == HTTP_POST)
+//   {
+//     // NOTE: no need to close portal specifically, it will timeout to close by timer handling
+//     const char htmlSuccess[] = "<html lang='en'><head><meta charset='utf-8'><style>body{font-family:'Segoe UI','Roboto';color:#212529;background-color:#f5f5f5;}h1,p{text-align: center}</style></head><body><main class='form-signin'><h1>Success!</h1><br/><p>Your settings have been saved successfully!<br/>Device is starting...</p></main></body></html>";
+//     _webServer.send(200, "text/html", htmlSuccess);
 
-    // save configuration received
-    if(String("configuration") == _webServer.arg("type"))
-    {
-      strncpy(cfg.module, _webServer.arg("module").c_str(), sizeof(cfg.module));
-      strncpy(cfg.ssid, _webServer.arg("ssid").c_str(), sizeof(cfg.ssid));
-      strncpy(cfg.pass, _webServer.arg("password").c_str(), sizeof(cfg.pass));
-      strncpy(cfg.ip, _webServer.arg("ip").c_str(), sizeof(cfg.ip));
+//     // save configuration received
+//     if(String("configuration") == _webServer.arg("type"))
+//     {
+//       strncpy(cfg.module, _webServer.arg("module").c_str(), sizeof(cfg.module));
+//       strncpy(cfg.ssid, _webServer.arg("ssid").c_str(), sizeof(cfg.ssid));
+//       strncpy(cfg.pass, _webServer.arg("password").c_str(), sizeof(cfg.pass));
+//       strncpy(cfg.ip, _webServer.arg("ip").c_str(), sizeof(cfg.ip));
 
-      strncpy(cfg.mqttServer, _webServer.arg("mqttServer").c_str(), sizeof(cfg.mqttServer));
-      cfg.mqttPort = atoi(_webServer.arg("mqttPort").c_str());
-      strncpy(cfg.mqttUser, _webServer.arg("mqttUser").c_str(), sizeof(cfg.mqttUser));
-      strncpy(cfg.mqttPass, _webServer.arg("mqttPass").c_str(), sizeof(cfg.mqttPass));
-      strncpy(cfg.otaPass, _webServer.arg("otaPass").c_str(), sizeof(cfg.otaPass));
+//       strncpy(cfg.mqttServer, _webServer.arg("mqttServer").c_str(), sizeof(cfg.mqttServer));
+//       cfg.mqttPort = atoi(_webServer.arg("mqttPort").c_str());
+//       strncpy(cfg.mqttUser, _webServer.arg("mqttUser").c_str(), sizeof(cfg.mqttUser));
+//       strncpy(cfg.mqttPass, _webServer.arg("mqttPass").c_str(), sizeof(cfg.mqttPass));
+//       strncpy(cfg.otaPass, _webServer.arg("otaPass").c_str(), sizeof(cfg.otaPass));
 
-      cfg.saveConfig();
+//       cfg.saveConfig();
       
-      _portalSubmitted = true;
+//       _portalSubmitted = true;
 
-      #ifdef _DEBUG
-        Serial.println(F("PORTAL: submitted"));
-      #endif
-    }else if(String("restart") == _webServer.arg("type"))
-    {
-      #ifdef _DEBUG
-        Serial.println(F("PORTAL: Restart"));
-      #endif
+//       #ifdef _DEBUG
+//         Serial.println(F("PORTAL: submitted"));
+//       #endif
+//     }else if(String("restart") == _webServer.arg("type"))
+//     {
+//       #ifdef _DEBUG
+//         Serial.println(F("PORTAL: Restart"));
+//       #endif
 
-      _restart(RsCode::RS_CFG_CHANGE);
-    }
+//       _restart(RsCode::RS_CFG_CHANGE);
+//     }
     
-  } else {
+//   } else {
 
-    // bool hasSettings = getSettings();
+//     // bool hasSettings = getSettings();
 
-    // String template = "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color: red;'>" + String(_portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='{SSID}' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' value='{PASS}' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='{MQTTSERVER}' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='{MQTTPORT}' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='{MQTTUSER}' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' value='{MQTTPASS}' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='module' type='text' value='{MODULE}' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' value='{OTAPASS}' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>";
+//     // String template = "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color: red;'>" + String(_portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='{SSID}' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' value='{PASS}' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='{MQTTSERVER}' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='{MQTTPORT}' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='{MQTTUSER}' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' value='{MQTTPASS}' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='module' type='text' value='{MODULE}' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' value='{OTAPASS}' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>";
 
-    // template.replace("{MODULE}",   cfg.module);
-    // template.replace("{SSID}",      cfg.ssid);
-    // template.replace("{PASS}",      cfg.pass);
-    // template.replace("{MQTTSERVER}",  cfg.mqttServer);
-    // template.replace("{MQTTPORT}",  cfg.mqttPort);
-    // template.replace("{MQTTUSER}",  cfg.mqttUser);
-    // template.replace("{MQTTPASS}",  cfg.mqttPass);
-    // template.replace("{OTAPASS}",   cfg.otaPass);
+//     // template.replace("{MODULE}",   cfg.module);
+//     // template.replace("{SSID}",      cfg.ssid);
+//     // template.replace("{PASS}",      cfg.pass);
+//     // template.replace("{MQTTSERVER}",  cfg.mqttServer);
+//     // template.replace("{MQTTPORT}",  cfg.mqttPort);
+//     // template.replace("{MQTTUSER}",  cfg.mqttUser);
+//     // template.replace("{MQTTPASS}",  cfg.mqttPass);
+//     // template.replace("{OTAPASS}",   cfg.otaPass);
 
-    // _webServer.send(200, "text/html", template);
+//     // _webServer.send(200, "text/html", template);
 
-    // if(hasSettings) // reset the form to previous configures
-    // {
-    //   // password mode (password hidden)
-    //   //_webServer.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color: red;'>" + String(_portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='" + String(cfg.ssid) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' type='password' value='" + String(cfg.pass) + "' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='" + String(cfg.mqttServer) + "' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='" + String(cfg.mqttPort) + "' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='" + String(cfg.mqttUser) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' type='password' value='" + String(cfg.mqttPass) + "' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='module' type='text' value='" + String(cfg.module) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' type='password' value='" + String(cfg.otaPass) + "' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
+//     // if(hasSettings) // reset the form to previous configures
+//     // {
+//     //   // password mode (password hidden)
+//     //   //_webServer.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color: red;'>" + String(_portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='" + String(cfg.ssid) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' type='password' value='" + String(cfg.pass) + "' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='" + String(cfg.mqttServer) + "' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='" + String(cfg.mqttPort) + "' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='" + String(cfg.mqttUser) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' type='password' value='" + String(cfg.mqttPass) + "' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='module' type='text' value='" + String(cfg.module) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' type='password' value='" + String(cfg.otaPass) + "' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
 
-    //   // non-password mode (show password)
-    _webServer.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><input type='hidden' name='type' value='configuration'><h1 class=''>Device Setup</h1><p style='color: red;'>" + String(_portalReason) + "</p><div class='form-floating'>Module:<input class='form-control' name='module' type='text' value='" + String(cfg.module) + "' /></div><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='" + String(cfg.ssid) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' value='" + String(cfg.pass) + "' /></div><div class='form-floating'>Static IP:<input class='form-control' name='ip' value='" + String(cfg.ip) + "' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='" + String(cfg.mqttServer) + "' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='" + String(cfg.mqttPort) + "' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='" + String(cfg.mqttUser) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' value='" + String(cfg.mqttPass) + "' /></div><strong>OTA:</strong><div class='form-floating'>Pass:<input class='form-control' name='otaPass' value='" + String(cfg.otaPass) + "' /></div><br/><button type='submit'>Save</button></form><hr><form action='/' method='post'><input type='hidden' name='type' value='restart'><button type='submit'>Restart</button></form></main></body></html>");
-    // }else
-    // {
-    //   _webServer.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color:red;'>" + String(_portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' type='pass' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='raspberrypi.local' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='1883' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' type='pass' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='module' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' type='pass' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
-    // }
-  }
-}
+//     //   // non-password mode (show password)
+//     _webServer.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><p>&nbsp;</p><main class='form-signin'><form action='/' method='post'><input type='hidden' name='type' value='configuration'><h1 class=''>Device Setup</h1><p style='color: red;'>" + String(_portalReason) + "</p><div class='form-floating'>Module:<input class='form-control' name='module' type='text' value='" + String(cfg.module) + "' /></div><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' value='" + String(cfg.ssid) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' value='" + String(cfg.pass) + "' /></div><div class='form-floating'>Static IP:<input class='form-control' name='ip' value='" + String(cfg.ip) + "' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='" + String(cfg.mqttServer) + "' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='" + String(cfg.mqttPort) + "' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' value='" + String(cfg.mqttUser) + "' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' value='" + String(cfg.mqttPass) + "' /></div><strong>OTA:</strong><div class='form-floating'>Pass:<input class='form-control' name='otaPass' value='" + String(cfg.otaPass) + "' /></div><br/><button type='submit'>Save</button></form><hr><form action='/' method='post'><input type='hidden' name='type' value='restart'><button type='submit'>Restart</button></form></main></body></html>");
+//     // }else
+//     // {
+//     //   _webServer.send(200, "text/html", "<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Wifi Setup</title> <style>*,::after,::before{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans';font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#f5f5f5;}.form-control{display:block;width:100%;height:calc(1.5em + .75rem + 2px);border:1px solid #ced4da;}button{cursor: pointer;border:1px solid transparent;color:#fff;background-color:#007bff;border-color:#007bff;padding:.5rem 1rem;font-size:1.25rem;line-height:1.5;border-radius:.3rem;width:100%}.form-signin{width:100%;max-width:400px;padding:15px;margin:auto;}h1{text-align: center}</style> </head> <body><main class='form-signin'><form action='/' method='post'><h1 class=''>Device Setup</h1><br /><p style='color:red;'>" + String(_portalReason) + "</p><div class='form-floating'>SSID:<input class='form-control' name='ssid' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='password' type='pass' /></div><strong>MQTT:</strong><div class='form-floating'>Host:<input class='form-control' name='mqttServer' type='text' value='raspberrypi.local' /></div><div class='form-floating'>Port:<input class='form-control' name='mqttPort' type='text' value='1883' /></div><div class='form-floating'>User:<input class='form-control' name='mqttUser' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='mqttPass' type='pass' /></div><strong>OTA:</strong><div class='form-floating'>Host:<input class='form-control' name='module' type='text' /></div><div class='form-floating'>Pass:<input class='form-control' name='otaPass' type='pass' /></div><br /><br /><button type='submit'>Save</button><p style='text-align: right;'>&nbsp;</p></form></main></body></html>");
+//     // }
+//   }
+// }
 
 void EspClient::timerCallback(Timer* timer)
 {
