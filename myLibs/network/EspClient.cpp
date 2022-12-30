@@ -122,11 +122,17 @@ void EspClient::_connectToWifi(bool blocking)
     #error Platform not supported
   #endif
 
+  // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
+  // turn off wif then on (in case it is auto pown on connecting)
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_OFF);   // this is a temporary line, to be removed after SDK update to 1.5.4
   WiFi.mode(WIFI_STA);
 
-  // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
-  // WiFi.disconnect(true);  // Delete old config
-  // WiFi.persistent(false); // Avoid to store Wifi configuration in Flash   
+  // Run the following two lines once to persistently disalbe auto power on connection
+  // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#setautoconnect
+  // https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
+  // WiFi.persistent(true);       // persistent is true by default, not anymore since v3 (https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/generic-class.html)
+  // WiFi.setAutoConnect(false);  // (Disable it) Configure module to automatically connect on power on to the last used access point.
 
   // do not change the mode (can be WIFI_STA or WIFI_AP_STA), just reconnect
 
@@ -134,7 +140,7 @@ void EspClient::_connectToWifi(bool blocking)
   // https://arduino.stackexchange.com/questions/78604/esp8266-wifi-not-connecting-to-internet-without-static-ip
   // Configure static IP will work for latest ESP8266 lib v3.0.2 where DHCP has problem
   // To make DHCP work, it need revert back to v2.5.2
-  
+
   // check if static ip address configured (non-empty)
   if(cfg.ip[0]=='\0')
   {
@@ -179,9 +185,9 @@ void EspClient::_connectToWifi(bool blocking)
     // auto reconnect when lost WiFi connection
     // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#setautoconnect
     // https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
-    WiFi.setAutoConnect(false);  // (Disable it) Configure module to automatically connect on power on to the last used access point.
-    WiFi.setAutoReconnect(true); // Set whether module will attempt to reconnect to an access point in case it is disconnected.
-    WiFi.persistent(true);       // persistent is true by default
+    // WiFi.persistent(true);       // persistent is true by default, not anymore since v3 (https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/generic-class.html)
+    // WiFi.setAutoConnect(false);  // (Disable it) Configure module to automatically connect on power on to the last used access point.
+    WiFi.setAutoReconnect(true);    // Set whether module will attempt to reconnect to an access point in case it is disconnected.
   }
 }
 
@@ -398,11 +404,10 @@ void EspClient::_setupOTA()
       type = F("sketch");
     } else { // U_FS
       type = F("filesystem");
-
-      // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-      LittleFS.end();
     }
 
+    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
+    // LittleFS.end();
     Serial.println("Start updating " + type);
   });
 
@@ -641,8 +646,7 @@ void EspClient::closeConfigPortal()
     return;
   }
 
-  // The portal may be forced to open when WiFi is still on (e.g., cmd sent from Node-Red dashboard)
-  Serial.println(F("Close AP."));
+  // Wifi may be connected if portal is opened intentionaly
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_STA);
 
@@ -926,6 +930,17 @@ void EspClient::_restart(RsCode code)
 {
   Serial.print(F("Restart device, code: "));
   Serial.println(code);
+
+  // disconnect mqtt broker
+  mqttClient.disconnect(true);
+
+  // stop OTA (Seems AruinoOTA does not have a end() to call)
+  // ArduinoOTA.end();
+  
+  // disconnect Wifi
+  WiFi.disconnect(true);  // Force disconnect.
+  WiFi.mode(WIFI_OFF);    // Turen off wifi radio
+  WiFi.persistent(false); // Avoid to store Wifi configuration in Flash
 
   #ifdef ESP8266
     ESP.reset();

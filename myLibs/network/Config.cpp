@@ -74,7 +74,7 @@ void Config::loadConfig(const char *filename)
   // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
   // Use arduinojson.org/v6/assistant to compute the capacity.
-  StaticJsonDocument<1024> doc;
+  StaticJsonDocument<JSON_CAPACITY> doc;
 
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, file);
@@ -119,7 +119,7 @@ void Config::saveConfig(const char *filename)
   // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
   // Use arduinojson.org/assistant to compute the capacity.
-  StaticJsonDocument<1024> doc;
+  StaticJsonDocument<JSON_CAPACITY> doc;
 
   // Set the values in the document
   buildJson(doc);
@@ -133,12 +133,12 @@ void Config::saveConfig(const char *filename)
   file.close();
 
 #ifdef _DEBUG
-  printFile(filename);
   printConfig();
+  printFile(filename);
 #endif
 }
 
-void Config::copyJson(StaticJsonDocument<1024> &doc)
+void Config::copyJson(StaticJsonDocument<JSON_CAPACITY> &doc)
 {
   // copy string value to the settings
   const char *_module = doc["module"]; strncpy(module, _module, sizeof(module));
@@ -187,7 +187,7 @@ void Config::copyJson(StaticJsonDocument<1024> &doc)
   // mqttPort = doc["mqtt"]["port"].as<uint8_t>();
 }
 
-void Config::buildJson(StaticJsonDocument<1024> &doc)
+void Config::buildJson(StaticJsonDocument<JSON_CAPACITY> &doc)
 {
   doc["module"] = module;
   doc["ssid"] = ssid;
@@ -228,11 +228,6 @@ void Config::buildJson(StaticJsonDocument<1024> &doc)
         {
           Serial.print(F("Wrong sensor type: ")); Serial.println(sensors[i].type);
         }
-
-        // nested["pin0"] = nameByPin(sensors[i].pin0);
-        // nested["pin1"] = nameByPin(sensors[i].pin1);
-        // nested["pin2"] = nameByPin(sensors[i].pin2);
-
         //serializeJson(array, Serial);
     }
   }
@@ -248,8 +243,8 @@ void Config::printConfig(bool json)
   Serial.println(F("----------------------------"));
   if(json)
   {
-    // DynamicJsonDocument doc(1024);
-    StaticJsonDocument<1024> doc;
+    // DynamicJsonDocument doc(JSON_CAPACITY);
+    StaticJsonDocument<JSON_CAPACITY> doc;
     buildJson(doc);
 
     serializeJsonPretty(doc, Serial);

@@ -25,6 +25,8 @@ struct CfgSensor
 
 #define MAX_SENSORS 3
 
+#define JSON_CAPACITY 1024
+
 class Config
 {
   // Singleton design (e.g., private constructor)
@@ -69,8 +71,8 @@ class Config
     const char* nameByPin(uint8_t pin);
 
 protected:
-  void buildJson(StaticJsonDocument<1024> &doc);
-  void copyJson(StaticJsonDocument<1024> &doc);
+  void buildJson(StaticJsonDocument<JSON_CAPACITY> &doc);
+  void copyJson(StaticJsonDocument<JSON_CAPACITY> &doc);
 
 private:
   // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return
