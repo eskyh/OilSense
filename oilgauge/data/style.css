@@ -1,0 +1,108 @@
+html {
+  font-family: Arial, Helvetica, sans-serif; 
+  display: inline-block; 
+  text-align: center;
+}
+
+h1{
+  font-size: 1.8rem; 
+  color: white;
+}
+
+.topnav { 
+  overflow: hidden; 
+  background-color: #0A1128;
+}
+
+body {  
+	margin:auto;
+	font-family:'Segoe UI','Roboto';
+	color:#212529;
+	background-color:#f5f5f5;
+}
+
+/* .form-control{ */
+	/* width:100%; */
+	/* height:calc(2em + 2px); */
+	/* border:1px solid #ced4da; */
+/* } */
+
+/* form { */
+  /* display: grid; */
+  /* grid-template-columns: 1fr 2fr; */
+  /* grid-gap: 1em; */
+  /* border-radius: 12px; */
+  /* padding: 1em; */
+  /* margin: 2rem auto 0 auto; */
+  /* max-width: 600px; */
+  /* align-items: center; */
+/* } */
+
+input, select{
+	border:1px solid #ced4da;
+	height:calc(2em + 2px);
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+}
+
+div {
+	margin-bottom: 10px;
+}
+
+.content { 
+  padding: 2%;
+}
+
+.card-grid { 
+  max-width: 800px; 
+  margin: 0 auto; 
+  display: grid; 
+  grid-gap: 2rem; 
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.card { 
+  background-color: white; 
+  box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
+}
+
+.card-title { 
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #034078
+}
+
+label {
+	display: inline-block;
+	/* width: 110px; */
+	color: #777777;
+	text-align: right;
+}
+
+button{
+	border: none;
+	cursor: pointer;
+	border:1px solid transparent;
+	color:#fff;
+	background-color:#007bff;
+	border-color:#007bff;
+	padding:.5rem 1rem;
+	font-size:1.25rem;
+	line-height:1.5;
+	border-radius:.8rem;
+	width:80%;
+}
+
+/* .button-on { */
+  /* background-color: #034078; */
+/* } */
+/* .button-on:hover { */
+  /* background-color: #1282A2; */
+/* } */
+/* .button-off { */
+  /* background-color: #858585; */
+/* } */
+/* .button-off:hover { */
+  /* background-color: #252524; */
+/* }  */

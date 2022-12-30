@@ -34,8 +34,8 @@ class Config
     static Config& instance();
     ~Config() {};
 
-    void loadConfig(const char *filename = "/config.json");
-    void saveConfig(const char *filename = "/config.json");
+    bool loadConfig(const char *filename = "/config.json");
+    bool saveConfig(const char *filename = "/config.json");
 
     //------------------------------------------------
     // Module name

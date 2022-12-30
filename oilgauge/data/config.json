@@ -1,5 +1,5 @@
 {
-	"module":"Demo",
+	"module":"OilGauge",
 	"wifi": {
 		"ssid":"ESky",
 		"pass":"Hcjwin66"
@@ -14,6 +14,7 @@
 		"pass":"Hcjmosaic@66"
 	},
   "sensors":[
+	 {"type":"HC-SR04","name":"sr04","pinTrig":"D1","pinEcho":"D2"},
 	 {"type":"DHT11","name":"dh11","pinData":"D5"}
 	]
 }

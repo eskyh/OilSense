@@ -25,7 +25,11 @@ void EspClient::setup()
     Serial.println("\n\nsetup()");
   #endif
 
-  cfg.loadConfig();
+  if(!cfg.loadConfig())
+  {
+    Serial.println(F("Failed to load configuration, open portal."));
+    openConfigPortal(true);
+  }
 
   _setupWifi();
   _setupMQTT();
@@ -46,6 +50,8 @@ void EspClient::_initSensors()
   {
     CfgSensor cfgSensor = cfg.sensors[i];
 
+    if(cfgSensor.type[0]=='\0') continue;
+
     Sensor *pSensor = NULL;
     if(strcmp(cfgSensor.type, "HC-SR04") == 0)
     {
@@ -63,9 +69,16 @@ void EspClient::_initSensors()
       pSensor = new DH11(cfgSensor.name, cfgSensor.pin0);
     }
 
-    String mqtt_pub_sensor = String(cfg.module) + "/sensor/" + pSensor->name;
-    pSensor->setMqtt(&mqttClient, mqtt_pub_sensor.c_str(), 0, false);
-    Serial.print("Sensor pub: "); Serial.println(mqtt_pub_sensor);
+    if(pSensor != NULL)
+    {
+      String mqtt_pub_sensor = String(cfg.module) + "/sensor/" + pSensor->name;
+      pSensor->setMqtt(&mqttClient, mqtt_pub_sensor.c_str(), 0, false);
+      Serial.print("Sensor pub: "); Serial.println(mqtt_pub_sensor);
+    }else
+    {
+      Serial.print(F("Invalide sensor type: "));
+      Serial.println(cfgSensor.type);
+    }
 
     _sensors[i] = pSensor;
   }
@@ -407,7 +420,6 @@ void EspClient::_setupOTA()
     }
 
     // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-    // LittleFS.end();
     Serial.println("Start updating " + type);
   });
 
@@ -812,7 +824,7 @@ void EspClient::_enableSensor(const char* name, bool enable)
 {
   for(int i=0; i<MAX_SENSORS; i++)
   {
-    if(strcmp(name, _sensors[i]->name) == 0)
+    if(_sensors[i] != NULL && strcmp(name, _sensors[i]->name) == 0)
     {
       Serial.print(name);
       Serial.print(F(" sensor enabled: "));
@@ -941,6 +953,12 @@ void EspClient::_restart(RsCode code)
   WiFi.disconnect(true);  // Force disconnect.
   WiFi.mode(WIFI_OFF);    // Turen off wifi radio
   WiFi.persistent(false); // Avoid to store Wifi configuration in Flash
+
+  //elete all sensor objects in _sensors[]
+  for(int i=0; i<MAX_SENSORS; i++)
+  {
+    if(_sensors[i] != NULL) delete _sensors[i];
+  }
 
   #ifdef ESP8266
     ESP.reset();

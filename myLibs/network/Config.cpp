@@ -51,19 +51,19 @@ const char* Config::nameByPin(uint8_t pin)
 
 // Loads the configuration from a file
 // https://arduinojson.org/v6/example/config/
-void Config::loadConfig(const char *filename)
+bool Config::loadConfig(const char *filename)
 {
   if(!LittleFS.begin())
   {
     Serial.println(F("FS: Failed to load json config"));
-    return;
+    return false;
   }
 
   if(!LittleFS.exists(filename))
   {
     Serial.print(F("FS: File doesn't exist: "));
     Serial.println(filename);
-    return;
+    return false;
   }
 
   Serial.println("Load Config...");
@@ -94,16 +94,18 @@ void Config::loadConfig(const char *filename)
   printFile(filename);
   printConfig();
 #endif
+
+  return true;
 }
 
 // Saves the configuration to a file
 // https://arduinojson.org/v6/example/config/
-void Config::saveConfig(const char *filename)
+bool Config::saveConfig(const char *filename)
 {
   if(!LittleFS.begin())
   {
     Serial.println(F("FS: Failed to load json config"));
-    return;
+    return false;
   }
 
   // Delete existing file, otherwise the configuration is appended to the file
@@ -113,7 +115,7 @@ void Config::saveConfig(const char *filename)
   File file = LittleFS.open(filename, "w");
   if (!file) {
     Serial.println(F("Failed to create file"));
-    return;
+    return false;
   }
 
   // Allocate a temporary JsonDocument
@@ -136,6 +138,8 @@ void Config::saveConfig(const char *filename)
   printConfig();
   printFile(filename);
 #endif
+
+  return false;
 }
 
 void Config::copyJson(StaticJsonDocument<JSON_CAPACITY> &doc)
