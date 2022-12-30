@@ -1,0 +1,19 @@
+{
+	"module":"SumpPit",
+	"wifi": {
+		"ssid":"ESky",
+		"pass":"Hcjwin66"
+	},
+	"ip":"",
+	"gateway":"",
+	"otapass":"Hcjmosaic@66",
+  "mqtt":{
+		"server":"raspberrypi.local",
+		"port":1883,
+		"user":"cjjiot",
+		"pass":"Hcjmosaic@66"
+	},
+  "sensors":[
+	 {"type":"HC-SR04","name":"sr04","pinTrig":"D1","pinEcho":"D2"}
+	]
+}
