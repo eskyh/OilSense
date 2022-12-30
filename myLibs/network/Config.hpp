@@ -32,10 +32,8 @@ class Config
     static Config& instance();
     ~Config() {};
 
-    bool valid = false; // indicate if the config is valid
-
-    void loadConfig();
-    void saveConfig();
+    void loadConfig(const char *filename = "/config.json");
+    void saveConfig(const char *filename = "/config.json");
 
     //------------------------------------------------
     // Module name
@@ -62,15 +60,17 @@ class Config
     CfgSensor sensors[MAX_SENSORS];
     //------------------------------------------------
 
+  void printConfig(bool json=false);
 #ifdef _DEBUG
-  void print(bool json=false);
+  void printFile(const char *filename);
 #endif
 
     uint8_t pinByName(const char*pin);
     const char* nameByPin(uint8_t pin);
 
-  protected:
-    void buildJson(DynamicJsonDocument &doc);
+protected:
+  void buildJson(StaticJsonDocument<1024> &doc);
+  void copyJson(StaticJsonDocument<1024> &doc);
 
 private:
   // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return

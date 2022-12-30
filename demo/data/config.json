@@ -5,6 +5,7 @@
 		"pass":"Hcjwin66"
 	},
 	"ip":"",
+	"gateway":"",
 	"otapass":"Hcjmosaic@66",
   "mqtt":{
 		"server":"raspberrypi.local",

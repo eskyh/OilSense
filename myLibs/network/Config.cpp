@@ -12,117 +12,7 @@
 Config& Config::instance()
 {
     static Config _instance;
-    static bool loaded = false;
-
-    // do not put loadConfig in private constructor as it is not executed!
-    if(!loaded)
-    {
-      _instance.loadConfig();
-      loaded = true;
-    }
-
     return _instance;
-}
-
-void Config::loadConfig()
-{
-  Serial.println(F("loadConfig()"));
-
-  // clean FS, for testing
-  // SPIFFS.format();
-
-  if (LittleFS.begin())
-  {
-    Serial.println(F("FS: Mounting file system"));
-
-    if (LittleFS.exists("/config.json"))
-    {
-      //file exists, reading and loading
-      Serial.println(F("FS: Reading config file"));
-      File configFile = LittleFS.open("/config.json", "r");
-      if (configFile)
-      {
-        size_t size = configFile.size();
-        // Allocate a buffer to store contents of the file.
-        std::unique_ptr<char[]> buf(new char[size]);
-
-        configFile.readBytes(buf.get(), size);
-        DynamicJsonDocument doc(1042);
-        // StaticJsonDocument<1024> doc;
-
-        DeserializationError error = deserializeJson(doc, buf.get());
-        
-        // Test if parsing succeeds.
-        if (error)
-        {
-          Serial.print(F("deserializeJson() failed: "));
-          Serial.println(error.c_str());
-          return;
-        }
-
-        // copy string value to the settings
-        const char *_module = doc["module"]; strncpy(module, _module, sizeof(module));
-        const char *_ssid = doc["wifi"]["ssid"]; strncpy(ssid, _ssid, sizeof(ssid));
-        const char *_pass = doc["wifi"]["pass"]; strncpy(pass, _pass, sizeof(pass));
-
-        const char *_ip = doc["ip"]; strncpy(ip, _ip, sizeof(ip));
-        const char *_gateway = doc["igatewayp"]; strncpy(gateway, _gateway, sizeof(gateway));
-        
-        const char *_mqttServer = doc["mqtt"]["server"]; strncpy(mqttServer, _mqttServer, sizeof(mqttServer));
-        mqttPort = doc["mqtt"]["port"];
-        const char *_mqttUser = doc["mqtt"]["user"]; strncpy(mqttUser, _mqttUser, sizeof(mqttUser));
-        const char *_mqttPass = doc["mqtt"]["pass"]; strncpy(mqttPass, _mqttPass, sizeof(mqttPass));
-
-        const char *_otaPass = doc["otapass"]; strncpy(otaPass, _otaPass, sizeof(otaPass));
-
-        const JsonArray& jsSensors =  doc["sensors"];
-
-        // for (auto sensor : sensors)
-        for (int i=0, size=MIN(jsSensors.size(),MAX_SENSORS); i<size; i++)
-        {
-          const char *_name = jsSensors[i]["name"]; strncpy(sensors[i].name, _name, sizeof(sensors[i].name));
-          const char *_type = jsSensors[i]["type"]; strncpy(sensors[i].type, _type, sizeof(sensors[i].type));
-
-          if(strcmp(_type, "HC-SR04") == 0)
-          {
-            sensors[i].pin0 = pinByName(jsSensors[i]["pinTrig"]);
-            sensors[i].pin1 = pinByName(jsSensors[i]["pinEcho"]);
-
-          }else if(strcmp(_type, "VL53L0X") == 0)
-          {
-            // no pin needed
-
-          }else if(strcmp(_type, "DHT11") == 0)
-          {
-            sensors[i].pin0 = pinByName(jsSensors[i]["pinData"]);
-          }else
-          {
-            Serial.print(F("Wrong sensor type: ")); Serial.println(_type);
-          }
-        }
-        
-        // check https://arduinojson.org/
-        // strncpy(ip, doc["ip"].as<const char*>(), sizeof(ip));
-        // strncpy(mqttServer, doc["mqtt"]["host"].as<const char*>(), sizeof(module));
-        // mqttPort = doc["mqtt"]["port"].as<uint8_t>();
-      } 
-      else {
-        Serial.println(F("FS: Failed to load json config"));
-      }
-
-      configFile.close();
-      Serial.println(F("FS: Closed file"));
-
-      valid = true; // successfully loaded config file
-    }else
-    {
-      Serial.println(F("FS: config.json does not exists"));  
-    }
-
-  } else
-  {
-    Serial.println(F("FS: failed mouning file system"));  
-  }
 }
 
 uint8_t Config::pinByName(const char*pin)
@@ -159,22 +49,145 @@ const char* Config::nameByPin(uint8_t pin)
   else return dict[pin].c_str();
 }
 
-void Config::saveConfig()
+// Loads the configuration from a file
+// https://arduinojson.org/v6/example/config/
+void Config::loadConfig(const char *filename)
 {
-  Serial.println("Save Config to file.");
+  if(!LittleFS.begin())
+  {
+    Serial.println(F("FS: Failed to load json config"));
+    return;
+  }
 
-  print();
+  if(!LittleFS.exists(filename))
+  {
+    Serial.print(F("FS: File doesn't exist: "));
+    Serial.println(filename);
+    return;
+  }
 
-  DynamicJsonDocument doc(1024);
-  // StaticJsonDocument<1024> doc;
-  buildJson(doc);
+  Serial.println("Load Config...");
 
-  // File file = LittleFS.open("/config.json", "w");
-  // serializeJson(doc, file);
-  // file.close();
+  // Open file for reading
+  File file = LittleFS.open(filename, "r");
+
+  // Allocate a temporary JsonDocument
+  // Don't forget to change the capacity to match your requirements.
+  // Use arduinojson.org/v6/assistant to compute the capacity.
+  StaticJsonDocument<1024> doc;
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, file);
+  if (error) Serial.println(F("Failed to read file, using default configuration"));
+
+  // Copy values from the JsonDocument to the Config
+  copyJson(doc);
+  // config.port = doc["port"] | 2731;
+  // strlcpy(config.hostname,                  // <- destination
+  //         doc["hostname"] | "example.com",  // <- source
+  //         sizeof(config.hostname));         // <- destination's capacity
+
+  // Close the file (Curiously, File's destructor doesn't close the file)
+  file.close();
+
+ #ifdef _DEBUG
+  printFile(filename);
+  printConfig();
+#endif
 }
 
-void Config::buildJson(DynamicJsonDocument &doc)
+// Saves the configuration to a file
+// https://arduinojson.org/v6/example/config/
+void Config::saveConfig(const char *filename)
+{
+  if(!LittleFS.begin())
+  {
+    Serial.println(F("FS: Failed to load json config"));
+    return;
+  }
+
+  // Delete existing file, otherwise the configuration is appended to the file
+  if(LittleFS.exists(filename)) LittleFS.remove(filename);
+
+  // Open file for writing
+  File file = LittleFS.open(filename, "w");
+  if (!file) {
+    Serial.println(F("Failed to create file"));
+    return;
+  }
+
+  // Allocate a temporary JsonDocument
+  // Don't forget to change the capacity to match your requirements.
+  // Use arduinojson.org/assistant to compute the capacity.
+  StaticJsonDocument<1024> doc;
+
+  // Set the values in the document
+  buildJson(doc);
+
+  // Serialize JSON to file
+  if (serializeJson(doc, file) == 0) {
+    Serial.println(F("Failed to write to file"));
+  }
+
+  // Close the file
+  file.close();
+
+#ifdef _DEBUG
+  printFile(filename);
+  printConfig();
+#endif
+}
+
+void Config::copyJson(StaticJsonDocument<1024> &doc)
+{
+  // copy string value to the settings
+  const char *_module = doc["module"]; strncpy(module, _module, sizeof(module));
+  const char *_ssid = doc["wifi"]["ssid"]; strncpy(ssid, _ssid, sizeof(ssid));
+  const char *_pass = doc["wifi"]["pass"]; strncpy(pass, _pass, sizeof(pass));
+
+  const char *_ip = doc["ip"]; strncpy(ip, _ip, sizeof(ip));
+  const char *_gateway = doc["gateway"]; strncpy(gateway, _gateway, sizeof(gateway));
+  
+  const char *_mqttServer = doc["mqtt"]["server"]; strncpy(mqttServer, _mqttServer, sizeof(mqttServer));
+  mqttPort = doc["mqtt"]["port"];
+  const char *_mqttUser = doc["mqtt"]["user"]; strncpy(mqttUser, _mqttUser, sizeof(mqttUser));
+  const char *_mqttPass = doc["mqtt"]["pass"]; strncpy(mqttPass, _mqttPass, sizeof(mqttPass));
+
+  const char *_otaPass = doc["otapass"]; strncpy(otaPass, _otaPass, sizeof(otaPass));
+
+  const JsonArray& jsSensors =  doc["sensors"];
+
+  // for (auto sensor : sensors)
+  for (int i=0, size=MIN(jsSensors.size(),MAX_SENSORS); i<size; i++)
+  {
+    const char *_name = jsSensors[i]["name"]; strncpy(sensors[i].name, _name, sizeof(sensors[i].name));
+    const char *_type = jsSensors[i]["type"]; strncpy(sensors[i].type, _type, sizeof(sensors[i].type));
+
+    if(strcmp(_type, "HC-SR04") == 0)
+    {
+      sensors[i].pin0 = pinByName(jsSensors[i]["pinTrig"]);
+      sensors[i].pin1 = pinByName(jsSensors[i]["pinEcho"]);
+
+    }else if(strcmp(_type, "VL53L0X") == 0)
+    {
+      // no pin needed
+
+    }else if(strcmp(_type, "DHT11") == 0)
+    {
+      sensors[i].pin0 = pinByName(jsSensors[i]["pinData"]);
+    }else
+    {
+      Serial.print(F("Wrong sensor type: ")); Serial.println(_type);
+    }
+  }
+  
+  // check https://arduinojson.org/
+  // strncpy(ip, doc["ip"].as<const char*>(), sizeof(ip));
+  // strncpy(mqttServer, doc["mqtt"]["host"].as<const char*>(), sizeof(module));
+  // mqttPort = doc["mqtt"]["port"].as<uint8_t>();
+}
+
+void Config::buildJson(StaticJsonDocument<1024> &doc)
 {
   doc["module"] = module;
   doc["ssid"] = ssid;
@@ -228,13 +241,15 @@ void Config::buildJson(DynamicJsonDocument &doc)
 }
 
 #ifdef _DEBUG
-void Config::print(bool json)
+void Config::printConfig(bool json)
 {
+  Serial.println(F("----------------------------"));
+  Serial.println(F("Configuration"));
   Serial.println(F("----------------------------"));
   if(json)
   {
-    DynamicJsonDocument doc(1024);
-    // StaticJsonDocument<1024> doc;
+    // DynamicJsonDocument doc(1024);
+    StaticJsonDocument<1024> doc;
     buildJson(doc);
 
     serializeJsonPretty(doc, Serial);
@@ -258,5 +273,35 @@ void Config::print(bool json)
     }
   }
   Serial.println(F("----------------------------"));
+}
+
+// Prints the content of a file to the Serial
+void Config::printFile(const char *filename)
+{
+  if(!LittleFS.begin())
+  {
+    Serial.println(F("FS: Failed to load json config"));
+    return;
+  }
+  
+  // Open file for reading
+  File file = LittleFS.open(filename, "r");
+  if (!file) {
+    Serial.println(F("Failed to read file"));
+    return;
+  }
+
+  Serial.println(F("----------------------------"));
+  Serial.print(F("File: ")); Serial.println(filename);
+  Serial.println(F("----------------------------"));
+  // Extract each characters by one by one
+  while (file.available()) {
+    Serial.print((char)file.read());
+  }
+  Serial.println();
+  Serial.println(F("----------------------------"));
+
+  // Close the file
+  file.close();
 }
 #endif

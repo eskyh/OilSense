@@ -90,9 +90,6 @@ class EspClient : public IStensTimerListener
     void openConfigPortal(bool blocking=false);
     void closeConfigPortal();
 
-    // must called before loop(), therefore in the setup() in main program
-    // void setCommandHandler(CommandHandler cmdHandler, const char* cmdTopic); 
-
     void setup();
     void loop(); // Main loop, to call at each sketch loop()
 
@@ -133,9 +130,7 @@ class EspClient : public IStensTimerListener
     bool _portalSubmitted = false;  // The configuration form submitted
     char _portalReason[50];         // reason of open portal (Not used at this moment.)
 
-    // WebServer _webServer = WebServer(80);
     AsyncWebServer _webServer = AsyncWebServer(80);
-    // void _handleWebRequest();
 
     // WiFi related
     bool _wifiConnected = false;
@@ -173,9 +168,6 @@ class EspClient : public IStensTimerListener
     void _measure();
     void _blink();
 
-    // message buffer
-    // char _msgQueue[10][2][25]; // 10 msgs, each message includes 2 strings max 25 length
-
     // Utility functions
-    static void _extractIpAddress(const char* sourceString, short* ipAddress);
+    // static void _extractIpAddress(const char* sourceString, short* ipAddress);
 };
