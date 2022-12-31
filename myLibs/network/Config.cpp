@@ -66,7 +66,9 @@ bool Config::loadConfig(const char *filename)
     return false;
   }
 
+#ifdef _DEBUG
   printFile(filename);
+#endif
 
   // Open file for reading
   File file = LittleFS.open(filename, "r");

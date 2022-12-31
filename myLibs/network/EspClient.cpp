@@ -5,6 +5,8 @@
 #include <FS.h>
 #include "LittleFS.h"
 
+#include <AsyncElegantOTA.h>
+
 #include "sr04.hpp"
 #include "dht11.hpp"
 #include "vl53l0x.hpp"
@@ -620,7 +622,9 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
     request->send(LittleFS, "/success.html");
   });
 
-  _webServer.begin();
+  AsyncElegantOTA.begin(&_webServer);  // Start ElegantOTA right before webserver start
+
+  _webServer.begin(); // start web server
 
   Serial.println(F("---------------------------------------------------"));
   Serial.println(F("Config portal on:"));
