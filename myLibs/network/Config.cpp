@@ -66,7 +66,7 @@ bool Config::loadConfig(const char *filename)
     return false;
   }
 
-  Serial.println("Load Config...");
+  printFile(filename);
 
   // Open file for reading
   File file = LittleFS.open(filename, "r");
@@ -161,9 +161,13 @@ void Config::copyJson(StaticJsonDocument<JSON_CAPACITY> &doc)
 
   const JsonArray& jsSensors =  doc["sensors"];
 
+  Serial.println("Copying sensors");
+
   // for (auto sensor : sensors)
   for (int i=0, size=MIN(jsSensors.size(),MAX_SENSORS); i<size; i++)
   {
+    Serial.printf("Copying sensors %d\n", i);
+
     const char *_name = jsSensors[i]["name"]; strncpy(sensors[i].name, _name, sizeof(sensors[i].name));
     const char *_type = jsSensors[i]["type"]; strncpy(sensors[i].type, _type, sizeof(sensors[i].type));
 
@@ -187,20 +191,21 @@ void Config::copyJson(StaticJsonDocument<JSON_CAPACITY> &doc)
   
   // check https://arduinojson.org/
   // strncpy(ip, doc["ip"].as<const char*>(), sizeof(ip));
-  // strncpy(mqttServer, doc["mqtt"]["host"].as<const char*>(), sizeof(module));
+  // strncpy(mqttServer, doc["mqtt"]["server"].as<const char*>(), sizeof(module));
   // mqttPort = doc["mqtt"]["port"].as<uint8_t>();
 }
 
 void Config::buildJson(StaticJsonDocument<JSON_CAPACITY> &doc)
 {
   doc["module"] = module;
-  doc["ssid"] = ssid;
-  doc["pass"] = pass;
+  
+  doc["wifi"]["ssid"] = ssid;
+  doc["wifi"]["pass"] = pass;
 
   doc["ip"] = ip;
   doc["gateway"] = gateway;
 
-  doc["mqtt"]["host"] = mqttServer;
+  doc["mqtt"]["server"] = mqttServer;
   doc["mqtt"]["port"] = mqttPort;
   doc["mqtt"]["user"] = mqttUser;
   doc["mqtt"]["pass"] = mqttPass;
