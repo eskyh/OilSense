@@ -1,256 +1,334 @@
-<html lang='en'>
-  <head>
-		<title>ESP Device Setup</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta charset='utf-8'>
-    <link rel="stylesheet" type="text/css" href="style.css">
-  </head> 
-  <body class='form-signin'>
-	  <div class="topnav">
-			<h1>ESP Device Setup</h1>
-		</div>
-		<div class="content">
-    <div class="card-grid">
-      <div class="card">
-			
-		<form action='/' method='post'>
-			<input type='hidden' name='type' value='configuration'>
-			<p style='color: red;'>%PORTAL_REASON%
-			</p>
-			<hr>
-			<div>
-				<label for="module">Module:</label>
-				<input name='module' type='text' value='%MODULE%' />
-			</div>
-			<hr>
-			<b>NETWORK</b>
-			<div>
-				<label for="ssid">SSID:</label>
-				<input name='ssid' type='text' value='%WIFI_SSID%' />
-			</div>
-			<div>
-				<label for="pass">Pass:</label>
-				<input name='pass' value='%WIFI_PASS%' />
-			</div>
-			<div>
-				<label for="ip">Static IP:</label>
-				<input name='ip' value='%IP%' />
-			</div>
-			<div>
-				<label for="gateway">Gateway:</label>
-				<input name='gateway' value='%GATEWAY%' />
-			</div>
-			<hr>
-			<b>MQTT:</b>
-			<div>
-				<label for="mqttServer">Server:</label>
-				<input name='mqttServer' type='text' value='%MQTT_SERVER%' />
-			</div>
-			<div>
-				<label for="mqttPort">Port:</label>
-				<input name='mqttPort' type='text' value='%MQTT_PORT%' />
-			</div>
-			<div>
-				<label for="mqttUser">User:</label>
-				<input name='mqttUser' type='text' value='%MQTT_USER%' />
-			</div>
-			<div>
-				<label for="mqttPass">Pass:</label>
-				<input name='mqttPass' value='%MQTT_PASS%' />
-			</div>
-			<b>OTA:</b>
-			<div>
-				<label for="otaPass">Pass:</label>
-				<input name='otaPass' value='%OTA_PASS%' />
-			</div>
-			<hr>
-			<div><i><b>Sensor 0:</b></i><br/>
-				<label for="s0_name">Name:</label>
-				<input name='s0_name' value='%S0_NAME%' style="width: 120px" />
-				<label for="s0_type">Type:</label>
-				<select name='s0_type' id='S0_TYPE'>
-					<option value=''></option>
-					<option value='HC-SR04'>HC-SR04 [pinTrig, pinEcho]</option>
-					<option value='DHT11'>DHT11, temperature [pinData]</option>
-					<option value='VL53L0X'>VL53L0X, laser sensor</option>
-				</select>
-				<label for="s0_pin0">Pin0:</label>
-				<select name='s0_pin0' id='S0_PIN0'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-				<label for="s0_pin1">Pin1:</label>
-				<select name='s0_pin1' id='S0_PIN1'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-				<label for="s0_pin2">Pin2:</label>
-				<select name='s0_pin2' id='S0_PIN2'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-			</div>
-			<div><i><b>Sensor 1:</b></i><br/>
-				<label for="s1_name">Name:</label>
-				<input name='s1_name' value='%S1_NAME%' style="width: 120px" />
-				<label for="s1_type">Type:</label>
-				<select name='s1_type' id='S1_TYPE'>
-					<option value=''></option>
-					<option value='HC-SR04'>HC-SR04 [pinTrig, pinEcho]</option>
-					<option value='DHT11'>DHT11, temperature [pinData]</option>
-					<option value='VL53L0X'>VL53L0X, laser sensor</option>
-				</select>
-				<label for="s1_pin0">Pin0:</label>
-				<select name='s1_pin0' id='S1_PIN0'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-				<label for="s1_pin1">Pin1:</label>
-				<select name='s1_pin1' id='S1_PIN1'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-				<label for="s1_pin2">Pin2:</label>
-				<select name='s1_pin2' id='S1_PIN2'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-			</div>
-			<div><i><b>Sensor 2:</b></i><br/>
-				<label for="s2_name">Name:</label>
-				<input name='s2_name' value='%S2_NAME%' style="width: 120px" />
-				<label for="s2_type">Type:</label>
-				<select name='s2_type' id='S2_TYPE'>
-					<option value=''></option>
-					<option value='HC-SR04'>HC-SR04 [pinTrig, pinEcho]</option>
-					<option value='DHT11'>DHT11, temperature [pinData]</option>
-					<option value='VL53L0X'>VL53L0X, laser sensor</option>
-				</select>
-				<label for="s2_pin0">Pin0:</label>
-				<select name='s2_pin0' id='S2_PIN0'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-				<label for="s2_pin1">Pin1:</label>
-				<select name='s2_pin1' id='S2_PIN1'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-				<label for="s2_pin2">Pin2:</label>
-				<select name='s2_pin2' id='S2_PIN2'>
-					<option value=''></option>
-					<option value='D1'>D1</option>
-					<option value='D2'>D2</option>
-					<option value='D3'>D3</option>
-					<option value='D4'>D4</option>
-					<option value='D5'>D5</option>
-					<option value='D6'>D6</option>
-					<option value='D7'>D7</option>
-					<option value='D8'>D8</option>
-					<option value='RX'>RX</option>
-					<option value='TX'>TX</option>
-				</select>
-			</div>			
-			<br/>
-			<button type='submit'>Save</button>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>JSONEditor with forms</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+</head>
+<body>
+<div class="container">
+    <p>
+        The form is set to send a <code>GET</code> request to the same page.
+        A change event listener has been added to the editor so that whenever the form changes, the editor value
+        is stored in a hidden input using <code>JSON.stringify()</code>.
+    </p>
+
+    <p>
+        The option <code>use_name_attributes</code> was set to <code>false</code>
+        to avoid sending the other field with the request.
+    </p>
+    <p>
+        When the form is submitted only the hidden input is sent in the request.
+        This allows to send data structures like arrays and object.
+        Also the same schema that is used to build the form can be used as parameter to backend json validators tools.
+        Try yourself, submit the form and look in the network tab of the developer tool.
+    </p>
+    <div class="form-group"></div>
+    <!-- <form action="/docs/form-submission.html" method="get"> -->
+        <!-- <input id="input" type="hidden" name="json"> -->
+				<!-- <textarea id="input" name="json" rows="10" cols="50"></textarea> -->
+        <!-- <div id='editor-container'></div> -->
+        <!-- <input id="submit" class="btn btn-primary" width="100" type="submit"> -->
+    <!-- </form> -->
+
+		<form action='/api/config' method='post' id='config'>
+			<input type='hidden' name='config' value='configuration'>
+			<div id='editor-container'></div>
+			<button id='save' type='button' class="btn btn-primary" width="100">Save</button> <!-- do not use type='submit' as ajax is to be used -->
 		</form>
+		
 		<hr>
-		<form action='/' method='post'>
-			<input type='hidden' name='type' value='restart'>
-			<button type='submit'>Restart</button>
+		
+		<form action='/restart' method='get'>
+			<button id='restart' type='button' class="btn btn-primary" width="100">Restart</button>
 		</form>
+
+		<form action='/reset_wifi' method='get'>
+			<button id='reset_wifi' type='button' class="btn btn-primary" width="100">Reset Wifi</button>
+		</form>
+
+    <br>
+		<div> 
+		<p><b>Real-time Json-form (synchronized with the form settings:</b></p>
+		<textarea id="post" name="json" rows="10" cols="100"></textarea>
+		</div>
 		
-      </div>
-    </div>
-  </div>		
+		<div>
+		<p><b>Set form with json strings:<b><button id='setvalue'>Set Form</button></p>
+		<textarea id="input" name="json" rows="10" cols="100"></textarea>
+		</div>
+
+		<div>
+		<p><b>Web response:</b></p>
+		<div id='status' style="color:red"></div>
+		<textarea id="output" name="json_received" rows="10" cols="100"></textarea>
+		</div>
 		
-		<script>
-			document.getElementById('S0_TYPE').value = '%S0_TYPE%';
-			document.getElementById('S0_PIN0').value = '%S0_PIN0%';
-			document.getElementById('S0_PIN1').value = '%S0_PIN1%';
-			document.getElementById('S0_PIN2').value = '%S0_PIN2%';
-			
-			document.getElementById('S1_TYPE').value = '%S1_TYPE%';
-			document.getElementById('S1_PIN0').value = '%S1_PIN0%';
-			document.getElementById('S1_PIN1').value = '%S1_PIN1%';
-			document.getElementById('S1_PIN2').value = '%S1_PIN2%';
-			
-			document.getElementById('S2_TYPE').value = '%S2_TYPE%';
-			document.getElementById('S2_PIN0').value = '%S2_PIN0%';
-			document.getElementById('S2_PIN1').value = '%S2_PIN1%';
-			document.getElementById('S2_PIN2').value = '%S2_PIN2%';
-		</script>
-  </body>
+		<br>
+    <h2>Get params</h2>
+    <pre id="get-params"></pre>
+</div>
+
+<script>
+
+var config = `%CONFIG%`;
+
+/*
+var config = `
+{
+	"module":"Demo",
+	"wifi": {
+		"ssid":"ESky",
+		"pass":"Hcjwin66"
+	},
+	"ip":"",
+	"gateway":"",
+	"otapass":"Hcjmosaic@66",
+  "mqtt":{
+		"server":"raspberrypi.local",
+		"port":1883,
+		"user":"cjjiot",
+		"pass":"Hcjmosaic@66"
+	},
+  "sensors":[
+	 {"type":"HC-SR04","name":"sr04","pins": ["D1","D2"]},
+	 {"type":"VL53L0X","name":"vl53"},
+	 {"type":"DHT11","name":"dh11","pins":["D5"]}
+	]
+}
+`;
+*/
+
+var form = document.getElementById('config')
+
+var save = document.getElementById('save')
+save.onclick = function(event){
+        var xhr = new XMLHttpRequest()
+        var formData = new FormData(form)
+        //open the request
+        xhr.open(form.method, form.action, true)
+        xhr.setRequestHeader("Content-Type", "application/json")
+
+        //send the form data, NOTE form has more data than editor, send editor json instead!!
+        //xhr.send(JSON.stringify(Object.fromEntries(formData)))
+				xhr.send(JSON.stringify(editor.getValue()))
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == XMLHttpRequest.DONE) {
+                // form.reset() //reset form after AJAX success or do something else
+								document.getElementById('status').innerHTML = 'Submitted'
+								document.getElementById('output').value = xhr.responseText
+            }
+        }
+        //Fail the onsubmit to avoid page refresh.
+        // return false; 
+    }
+		
+var restart = document.getElementById('restart')
+restart.onclick = function(event){
+        var xhr = new XMLHttpRequest()
+        //open the request
+        xhr.open('get', '/restart', true)
+        xhr.setRequestHeader("Content-Type", "text/plain")
+
+				xhr.send()
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == XMLHttpRequest.DONE) {
+                // form.reset() //reset form after AJAX success or do something else
+								// document.getElementById('status').innerHTML = 'Submitted'
+								document.getElementById('output').value = xhr.responseText
+            }
+        }
+        //Fail the onsubmit to avoid page refresh.
+        // return false; 
+    }
+
+var reset_wifi = document.getElementById('reset_wifi')
+reset_wifi.onclick = function(event){
+        var xhr = new XMLHttpRequest()
+        //open the request
+        xhr.open('get', '/reset_wifi', true)
+        xhr.setRequestHeader("Content-Type", "text/plain")
+
+				xhr.send()
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == XMLHttpRequest.DONE) {
+                // form.reset() //reset form after AJAX success or do something else
+								// document.getElementById('status').innerHTML = 'Submitted'
+								document.getElementById('output').value = xhr.responseText
+            }
+        }
+        //Fail the onsubmit to avoid page refresh.
+        // return false; 
+    }
+
+</script>
+
+<script src="jsoneditor.min.js"></script>
+<script>
+  var params = {}
+  for (const [key, value] of new URLSearchParams(window.location.search).entries()) {
+    params[key] = value
+    console.log(key, value)
+  }
+  document.querySelector('#get-params').textContent = JSON.stringify(params, null, 2)
+  var schema = {
+    use_name_attributes: false,
+    theme: 'bootstrap4',
+    disable_edit_json: true,
+    disable_properties: true,
+    disable_collapse: true,
+    schema: {
+      'title': 'ESP Device Setup',
+      'type': 'object',
+      'required': [
+        'module',
+        'wifi',
+				'mqtt',
+        'sensors'
+      ],
+      'properties': {
+        'module': {
+					'title': 'Module',
+          'type': 'string',
+          'description': 'Module name, used as dns name for OTA and ssid in AP mode.',
+          'minLength': 4,
+          'default': 'ESP8266'
+        },
+        'wifi': {
+          'type': 'object',
+          'title': 'WiFi',
+          'properties': {
+            'ssid': {
+							'title': 'SSID',
+              'type': 'string',
+              'default': 'ESky'
+            },
+            'pass': {
+							'title': 'Password',
+              'type': 'string',
+              'default': ''
+            }
+          }
+        },
+				'ip': {
+					'title': 'Static IP',
+					'type': 'string',
+					'default': '192.168.0.190'
+				},
+				'gateway': {
+					'title': 'Gateway',
+					'type': 'string',
+					'default': ''
+				},
+				'otapass': {
+					'title': 'OTA pass',
+					'type': 'string',
+					'default': ''
+				},
+        'mqtt': {
+          'type': 'object',
+          'title': 'MQTT',
+          'properties': {
+            'server': {
+							'title': 'Server',
+              'type': 'string',
+              'default': 'raspberrypi.local'
+            },
+            'port': {
+							'title': 'Port',
+              'type': 'integer',
+              'default': 1883
+            },
+            'serverport': {
+              'type': 'string',
+              'description': 'This is generated automatically from the previous two fields',
+              'template': '{{server}}:{{port}}',
+              'watch': {
+                'server': 'mqtt.server',
+                'port': 'mqtt.port'
+              }
+            },
+            'user': {
+							'title': 'User',
+              'type': 'string',
+              'default': 'cjjiot'
+            },						
+            'pass': {
+              'type': 'string',
+              'default': ''
+            }
+          }
+        },
+        'sensors': {
+          'type': 'array',
+          'format': 'table',
+          'title': 'Sensors',
+          'uniqueItems': true,
+          'items': {
+            'type': 'object',
+            'title': 'Sensor',
+            'properties': {
+              'type': {
+                'type': 'string',
+                'enum': [
+                  'HC-SR04',
+                  'VL53L0X',
+                  'DHT11'
+                ],
+                'default': ''
+              },
+              'name': {
+                'type': 'string'
+              },
+							'pins': {
+                'type': 'array',
+								'format': 'table',
+								'items': {
+									'type': 'string',
+									'enum': [
+										'D0',
+										'D1',
+										'D2',
+										'D3',
+										'D4',
+										'D5',
+										'D6',
+										'D7',
+										'D8',
+										'D9',
+										'RX',
+										'TX'
+									],
+									'default': ''
+								}
+              }
+            }
+					}
+        }
+      }
+    }
+  }
+
+  var editor = new JSONEditor(document.querySelector('#editor-container'), schema)
+
+	document.getElementById('setvalue').onclick = function(event){
+		editor.setValue(JSON.parse(document.getElementById('input').value))
+	}
+
+  
+	editor.on('ready', function () {
+    // editor.setValue(config); // set the config
+		// document.querySelector('#input').value = config
+		editor.setValue(JSON.parse(config))
+  })
+  
+	editor.on('change', function () {
+    document.querySelector('#post').value = JSON.stringify(editor.getValue())
+  })
+</script>
+</body>
 </html>
