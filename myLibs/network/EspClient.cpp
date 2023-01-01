@@ -14,6 +14,8 @@
 Config &cfg = Config::instance();
 StensTimer *pTimer = StensTimer::getInstance();
 
+AsyncCallbackWebHandler *handler = NULL; // the web root handler
+
 EspClient& EspClient::instance()
 {
     static EspClient _instance;
@@ -204,6 +206,9 @@ void EspClient::_connectToWifi(bool blocking)
     // WiFi.setAutoConnect(false);  // (Disable it) Configure module to automatically connect on power on to the last used access point.
     WiFi.setAutoReconnect(true);    // Set whether module will attempt to reconnect to an access point in case it is disconnected.
   }
+
+  // Open the portal so the web OTA update is on. main portal will be closed when time out
+  openConfigPortal();
 }
 
 // Try to connect to the MQTT broker and return True if the connection is successfull (blocking)
@@ -455,21 +460,6 @@ void EspClient::_setupOTA()
   Serial.printf("OTA: %s @ %s\n", cfg.module, WiFi.localIP().toString().c_str());
 }
 
-String processor(const String& var){
-  // Serial.println(var);
-  // if(var == "GPIO_STATE"){
-  //   if(digitalRead(ledPin)){
-  //     ledState = "OFF";
-  //   }
-  //   else{
-  //     ledState = "ON";
-  //   }
-  //   Serial.print(ledState);
-  //   return ledState;
-  // }
-  return String("Haha");
-}
-
 // This will start a webserver allowing user to configure all settings via web.
 // Two approach to access the webserver:
 //     1. Connect AP WiFi SSID (usually named "ESP-XXXX"). Browse 192.168.4.1 
@@ -480,6 +470,8 @@ String processor(const String& var){
 // parameter: force means force open the portal (even there is no connection issue)
 void EspClient::openConfigPortal(bool blocking) //char const *apName, char const *apPassword)
  {
+  static bool first = true; // inidcate if open the first time
+
   if(_portalOn)
   {
     #ifdef _DEBUG
@@ -490,7 +482,7 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
   }
 
   _portalOn = true;         // this will enable the pollPortal call in the loop of main.cpp
-  _portalSubmitted = false; // will be set to true when the configuration is done in _handleConfigPortal
+  _portalSubmitted = false; //TODO: no need anymore? // will be set to true when the configuration is done in _handleConfigPortal
 
   // use WIFI_AP_STA model such that WiFi reconnecting still going on
   // This is useful when the router is off. Once router is back on
@@ -505,20 +497,24 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
   //   n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", cfg.module, ESP.getChipId()); //ipAddress[3]);
 
   int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", cfg.module, ESP.getChipId());
-
   if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
 
-  WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(ssid, NULL); // apPassword);
-  
+  if(WiFi.getMode() == WIFI_STA)
+  {
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.softAP(ssid, NULL); // apPassword);
+  }
+
   // Setting web server
   // refer: https://microcontrollerslab.com/esp8266-nodemcu-web-server-using-littlefs-flash-file-system/
   // _webServer.on("/",  std::bind(&EspClient::_handleWebRequest, this)); // bind is to make class function as static callback
 
     // Route for root / web page
-  _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+  AsyncCallbackWebHandler& rhandler = _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/index.html", String(), false, [](const String& var){
+    #ifdef _DEBUG
       Serial.println(var);
+    #endif
       if(var == "MODULE") return String(cfg.module);
       else if(var == "WIFI_SSID") return String(cfg.ssid);
       else if(var == "WIFI_PASS") return String(cfg.pass);
@@ -548,12 +544,21 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
     });
   });
 
+  handler = &rhandler; // save the handler to remove during webserver hibernate
+
+  // set timmer to close portal in 120s
+  StensTimer *pTimer = StensTimer::getInstance(); 
+  pTimer->setTimer(this, ACT_CLOSE_PORTAL, PORTAL_TIMEOUT);
+
+  // only turn on the main page listening above if not first time. As webserver is on (only turned off main page handling in closePortal)
+  if(!first) return;
+
   // Route to load style.css file
   _webServer.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/style.css", "text/css");
   });
 
-  _webServer.on("/", HTTP_POST, [](AsyncWebServerRequest *request){
+  _webServer.on("/", HTTP_POST, [&](AsyncWebServerRequest *request){
     #ifdef _DEBUG
       Serial.println("------------------------");
       Serial.println("Config submission received");
@@ -620,6 +625,13 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
 
     // send back the success web page.
     request->send(LittleFS, "/success.html");
+
+    closeConfigPortal();
+  });
+
+  // Do not close the webserver, instead set it response 404 instead, then the webOTA is still on
+  _webServer.onNotFound([](AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
   });
 
   AsyncElegantOTA.begin(&_webServer);  // Start ElegantOTA right before webserver start
@@ -631,10 +643,6 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
   if(_wifiConnected) Serial.printf("Browse http://%s/ or %s for portal, or\n", cfg.module, WiFi.localIP().toString().c_str());
   Serial.printf("Connect to Wifi \"%s\" and browse http://%s/ or %s.\n", ssid, cfg.module, WiFi.softAPIP().toString().c_str());
   Serial.println(F("---------------------------------------------------"));
-
-  // set timmer to close portal in 120s
-  StensTimer *pTimer = StensTimer::getInstance(); 
-  pTimer->setTimer(this, ACT_CLOSE_PORTAL, PORTAL_TIMEOUT);
 
   if(blocking)
   {
@@ -649,6 +657,8 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
     } 
     closeConfigPortal();
   }
+
+  first = false;
 }
 
 void EspClient::closeConfigPortal()
@@ -663,11 +673,22 @@ void EspClient::closeConfigPortal()
   }
 
   // Wifi may be connected if portal is opened intentionaly
-  WiFi.softAPdisconnect(true);
-  WiFi.mode(WIFI_STA);
+  if(_wifiConnected)
+  {
+    // When wifi is on, close AP, only keep STA
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
+  }
 
-  // _webServer.stop();
-  _webServer.end();
+  // instead of turn off webserver, keep the web OTA on only for upstating.
+  if(handler != NULL)
+  {
+    _webServer.removeHandler(handler);
+    handler = NULL;
+  }
+
+  // _webServer.end();
+
   _portalOn = false; // reset flag
 
   Serial.println(F("Config portal closed"));

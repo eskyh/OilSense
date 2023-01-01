@@ -67,7 +67,7 @@
 #define MQTT_RECONNECT_INTERVAL  2e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_SUBSCRIBE_DELAY     1e3    // MQTT subscribe attempt delay after connected
 #define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout, 20s bu default
-#define PORTAL_TIMEOUT           120e3  // Configuration portal timeout
+#define PORTAL_TIMEOUT           300e3  // Configuration portal timeout, 5min by default (leave enough time for web OTA uploading when wifi is down)
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
@@ -141,6 +141,9 @@ class EspClient : public IStensTimerListener
     Timer *_pTimerReconnect = NULL;
     bool _mqttConnected = false;
     void _setupMQTT();
+
+    // OTA related
+    
     void _setupOTA();
 
     void _connectToWifi(bool blocking=false);

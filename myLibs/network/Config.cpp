@@ -66,10 +66,6 @@ bool Config::loadConfig(const char *filename)
     return false;
   }
 
-#ifdef _DEBUG
-  printFile(filename);
-#endif
-
   // Open file for reading
   File file = LittleFS.open(filename, "r");
 
@@ -163,13 +159,9 @@ void Config::copyJson(StaticJsonDocument<JSON_CAPACITY> &doc)
 
   const JsonArray& jsSensors =  doc["sensors"];
 
-  Serial.println("Copying sensors");
-
   // for (auto sensor : sensors)
   for (int i=0, size=MIN(jsSensors.size(),MAX_SENSORS); i<size; i++)
   {
-    Serial.printf("Copying sensors %d\n", i);
-
     const char *_name = jsSensors[i]["name"]; strncpy(sensors[i].name, _name, sizeof(sensors[i].name));
     const char *_type = jsSensors[i]["type"]; strncpy(sensors[i].type, _type, sizeof(sensors[i].type));
 
