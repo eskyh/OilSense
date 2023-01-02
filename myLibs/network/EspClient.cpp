@@ -5,6 +5,9 @@
 #include <FS.h>
 #include "LittleFS.h"
 
+#include "AsyncJson.h"
+#include "ArduinoJson.h"
+
 #include <AsyncElegantOTA.h>
 
 #include "sr04.hpp"
@@ -32,59 +35,64 @@ void EspClient::setup()
   if(!cfg.loadConfig())
   {
     Serial.println(F("Failed to load configuration, open portal."));
-    openConfigPortal(true);
+    openPortal(true);
   }
 
   _setupWifi();
   _setupMQTT();
   
-  _connectToWifi(true); // blocking mode
+  // _connectToWifi(true); // blocking mode  
 
   _initSensors();
 
   //-- Create timers
-  pTimer->setInterval(this, ACT_HEARTBEAT, 1e3);                  // heartbeat every 1 second
+  pTimer->setInterval(this, ACT_HEARTBEAT, 1e3);  // heartbeat every 1 second
   _timer_sensor = pTimer->setInterval(this, ACT_MEASURE, 10e3);   // every 10 seconds. Save the returned timer for reset the time interval
 }
 
 void EspClient::_initSensors()
 {
-    // set up the sensors
-  for(int i=0; i<MAX_SENSORS; i++)
-  {
-    CfgSensor cfgSensor = cfg.sensors[i];
+  JsonArray arr = cfg.doc["sensors"].as<JsonArray>();
 
-    if(cfgSensor.type[0]=='\0') continue;
+  // using C++11 syntax (preferred):
+  for (JsonVariant value : arr) {
+      
+    JsonObject sensor = value.as<JsonObject>();
+    String type = sensor["type"].as<String>();
+    String name = sensor["name"].as<String>();
 
     Sensor *pSensor = NULL;
-    if(strcmp(cfgSensor.type, "HC-SR04") == 0)
+    if(type == "HC-SR04")
     {
-      //pinTrig: pin0
-      //pinEcho: pin1;
-      pSensor = new SR04(cfgSensor.name, cfgSensor.pin0, cfgSensor.pin1);
+      String pin0 = sensor["pins"][0].as<String>();
+      String pin1 = sensor["pins"][1].as<String>();
+      uint8_t pinTrig = cfg.pinByName(pin0);
+      uint8_t pinEcho = cfg.pinByName(pin1);
+      pSensor = new SR04(name.c_str(), pinTrig, pinEcho);
 
-    }else if(strcmp(cfgSensor.type, "VL53L0X") == 0)
+    }else if(type == "VL53L0X")
     {
-      pSensor = new VL53L0X(cfgSensor.name);
+      pSensor = new VL53L0X(name.c_str());
 
-    }else if(strcmp(cfgSensor.type, "DHT11") == 0)
+    }else if(type == "DHT11")
     {
-      //pinData: pin0
-      pSensor = new DH11(cfgSensor.name, cfgSensor.pin0);
+      String pin0 = sensor["pins"][0].as<String>();
+      uint8_t pinData = cfg.pinByName(pin0);
+      pSensor = new DH11(name.c_str(), pinData);
     }
 
     if(pSensor != NULL)
     {
-      String mqtt_pub_sensor = String(cfg.module) + "/sensor/" + pSensor->name;
+      String mqtt_pub_sensor = cfg.module + "/sensor/" + name;
       pSensor->setMqtt(&mqttClient, mqtt_pub_sensor.c_str(), 0, false);
-      Serial.print("Sensor pub: "); Serial.println(mqtt_pub_sensor);
+      Serial.print(("Sensor init: ")); Serial.println(name);
     }else
     {
       Serial.print(F("Invalide sensor type: "));
-      Serial.println(cfgSensor.type);
+      Serial.println(type);
     }
 
-    _sensors[i] = pSensor;
+    _sensors.push_back(pSensor);
   }
 }
 
@@ -93,13 +101,10 @@ void EspClient::loop()
   // let StensTimer do it's magic every time loop() is executed
   pTimer->run();
 
-  // // A loop to enable the _webServer process client request 
-  // if(_portalOn) _webServer.handleClient();
-
   // Wifi handling
   if(!_wifiConnected)
   {
-    // Do nothing else as ESP WiFi module take care of reconnecting (configured in _connectToWifi())
+    _connectToWifi();
     return;
 
   }else
@@ -132,17 +137,20 @@ void EspClient::loop()
 void EspClient::_connectToWifi(bool blocking)
 {
   #ifdef ESP8266
-    WiFi.hostname(cfg.module);
+    WiFi.hostname(cfg.module.c_str());
   #elif defined(ESP32)
-    WiFi.setHostname(cfg.module);
+    WiFi.setHostname(cfg.module.c_str());
   #else
     #error Platform not supported
   #endif
 
   // check the reason of the the two line below: https://github.com/esp8266/Arduino/issues/2186
   // turn off wif then on (in case it is auto pown on connecting)
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_OFF);   // this is a temporary line, to be removed after SDK update to 1.5.4
+  // WiFi.persistent(false);
+  // WiFi.disconnect(true);  // Force disconnect. It erases the saved Configuration Of Wifi in STA Mode
+  // WiFi.mode(WIFI_OFF);   // Turen off wifi radio. this is a temporary line, to be removed after SDK update to 1.5.4
+
+    // Set WiFi to station mode
   WiFi.mode(WIFI_STA);
 
   // Run the following two lines once to persistently disalbe auto power on connection
@@ -159,7 +167,7 @@ void EspClient::_connectToWifi(bool blocking)
   // To make DHCP work, it need revert back to v2.5.2
 
   // check if static ip address configured (non-empty)
-  if(cfg.ip[0]=='\0')
+  if(cfg.ip != "")
   {
     IPAddress ip;   //ESP static ip
     if(ip.fromString(cfg.ip)) // parsing ip address
@@ -169,11 +177,17 @@ void EspClient::_connectToWifi(bool blocking)
       IPAddress subnet(255,255,255,0);  //Subnet mask
       
       IPAddress gateway;
-      if(cfg.gateway[0]=='\0' || !gateway.fromString(cfg.gateway))
-        gateway = IPAddress(192,168,0,1);   //IP Address of your WiFi Router (Gateway)
+      if(gateway[0]=='\0' || !gateway.fromString(cfg.gateway))
+        gateway = IPAddress(192,168,0,1);//IP Address of your WiFi Router (Gateway)
 
       IPAddress dns(0, 0, 0, 0);        //DNS 167.206.10.178
+      // WiFi.config(ip, gateway, subnet);
       WiFi.config(ip, subnet, gateway, dns);
+
+    }else
+    {
+      Serial.print(F("Invalid static IP:"));
+      Serial.println(cfg.ip.c_str());
     }
   }
 
@@ -182,33 +196,28 @@ void EspClient::_connectToWifi(bool blocking)
   // conflicting with the WiFi.begin(ssid, pass) call below. To solve this problem, WiFi.setAutoConnect(false), and
   // persistent the setting by WiFi.persistent(true).
   //------------------------------------------------------------------------------------------------------------------
-  WiFi.begin(cfg.ssid, cfg.pass);
+  WiFi.begin(cfg.ssid.c_str(), cfg.pass.c_str());
 
   // set timmer for Wifi connect timeout in 120s (will open portal in blocking mode!!)
   StensTimer *pTimer = StensTimer::getInstance(); 
   pTimer->setTimer(this, ACT_WIFI_CONNECT_TIMEOUT, WIFI_CONNECTING_TIMEOUT);
 
-  if(blocking)
+  while (WiFi.status() != WL_CONNECTED)
   {
-    Serial.print("Connecting to Wifi");
-    while (WiFi.status() != WL_CONNECTED)
-    {
-      pTimer->run(); // on blocking mode, need to handle timer logic to check timeout event!
-      delay(500);
-      Serial.print(".");
-    }
-    Serial.println();
-
-    // auto reconnect when lost WiFi connection
-    // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#setautoconnect
-    // https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
-    // WiFi.persistent(true);       // persistent is true by default, not anymore since v3 (https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/generic-class.html)
-    // WiFi.setAutoConnect(false);  // (Disable it) Configure module to automatically connect on power on to the last used access point.
-    WiFi.setAutoReconnect(true);    // Set whether module will attempt to reconnect to an access point in case it is disconnected.
+    pTimer->run(); // on blocking mode, need to handle timer logic to check timeout event!
+    delay(1000);
+    Serial.print(WiFi.status());
   }
 
+  // auto reconnect when lost WiFi connection
+  // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#setautoconnect
+  // https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
+  // WiFi.persistent(true);       // persistent is true by default, not anymore since v3 (https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/generic-class.html)
+  // WiFi.setAutoConnect(false);  // (Disable it) Configure module to automatically connect on power on to the last used access point.
+  WiFi.setAutoReconnect(true);    // Set whether module will attempt to reconnect to an access point in case it is disconnected.
+
   // Open the portal so the web OTA update is on. main portal will be closed when time out
-  openConfigPortal();
+   openPortal();
 }
 
 // Try to connect to the MQTT broker and return True if the connection is successfull (blocking)
@@ -216,7 +225,7 @@ void EspClient::_connectToMqttBroker()
 {
   mqttClient.connect();
   Serial.print(F("MQTT: Connecting "));
-  Serial.println(cfg.mqttServer);
+  Serial.println(cfg.mqttServer.c_str());
 }
 
 void EspClient::_setupWifi()
@@ -236,12 +245,13 @@ void EspClient::_setupWifi()
   //   Serial.println(F("WiFi: Connected"));
   //   Serial.println(F("-------------------------------------"));
   // });
-  
+
   static WiFiEventHandler GOT_IP_HANDLER = WiFi.onStationModeGotIP([&] (const WiFiEventStationModeGotIP& event) {
     Serial.println(F("-------------------------------------"));
-    Serial.print(F("WiFi: Got IP"));
+    Serial.print(F("WiFi: Got IP "));
     Serial.println(WiFi.localIP().toString().c_str());
     Serial.println(F("-------------------------------------"));
+
     _wifiConnected = true;
 
     // reconnect MQTT
@@ -255,7 +265,6 @@ void EspClient::_setupWifi()
       Serial.println("MQTT: Set reconnect timmer");
     #endif
 
-
     // Only set up OTA when got IP!!
     _setupOTA();
   });
@@ -266,6 +275,13 @@ void EspClient::_setupWifi()
     Serial.println(F("-------------------"));
     _wifiConnected = false;
   });
+
+  // Set WiFi to station mode
+  WiFi.mode(WIFI_STA);
+
+  // Disconnect from an AP if it was previously connected
+  WiFi.disconnect();
+  delay(100);
 }
 
 void EspClient::_setupMQTT()
@@ -385,15 +401,15 @@ void EspClient::_setupMQTT()
     // copies at most size-1 non-null characters from src to dest and adds a null terminator
     snprintf(buffer, min(len+1, (size_t)sizeof(buffer)), "%s", payload);
 
-    int size = strlen(cfg.module);
+    int size = cfg.module.length();
     _cmdHandler(&(topic[size]), buffer);
   });
 
   // set MQTT server
-  mqttClient.setServer(cfg.mqttServer, cfg.mqttPort);
+  mqttClient.setServer(cfg.mqttServer.c_str(), cfg.mqttPort);
   
   // If your broker requires authentication (username and password), set them below
-  mqttClient.setCredentials(cfg.mqttUser, cfg.mqttPass);
+  mqttClient.setCredentials(cfg.mqttUser.c_str(), cfg.mqttPass.c_str());
 }
 
 // This is called in WiFi connected callback set in _setupWifi()
@@ -409,10 +425,10 @@ void EspClient::_setupOTA()
   // ArduinoOTA.setPort(8266);
 
   // Hostname defaults to esp8266-[ChipID]
-  ArduinoOTA.setHostname(cfg.module);
+  ArduinoOTA.setHostname(cfg.module.c_str());
 
   // No authentication by default
-  ArduinoOTA.setPassword(cfg.otaPass);
+  ArduinoOTA.setPassword(cfg.otaPass.c_str());
 
   // Password can be set with it's md5 value as well
   // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
@@ -457,7 +473,7 @@ void EspClient::_setupOTA()
   });
 
   ArduinoOTA.begin();
-  Serial.printf("OTA: %s @ %s\n", cfg.module, WiFi.localIP().toString().c_str());
+  Serial.printf("OTA: %s @ %s\n", cfg.module.c_str(), WiFi.localIP().toString().c_str());
 }
 
 // This will start a webserver allowing user to configure all settings via web.
@@ -468,7 +484,7 @@ void EspClient::_setupOTA()
 //     2. Connect via Family network. Only works when the module is still connected
 //        to the family Wifi router with a valid ip address.
 // parameter: force means force open the portal (even there is no connection issue)
-void EspClient::openConfigPortal(bool blocking) //char const *apName, char const *apPassword)
+void EspClient::openPortal(bool blocking) //char const *apName, char const *apPassword)
  {
   static bool first = true; // inidcate if open the first time
 
@@ -482,7 +498,7 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
   }
 
   _portalOn = true;         // this will enable the pollPortal call in the loop of main.cpp
-  _portalSubmitted = false; //TODO: no need anymore? // will be set to true when the configuration is done in _handleConfigPortal
+  _portalSubmitted = false; // used when portal is in blocking mode. will be set to true when the configuration is done in _handleConfigPortal
 
   // use WIFI_AP_STA model such that WiFi reconnecting still going on
   // This is useful when the router is off. Once router is back on
@@ -496,7 +512,7 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
   //   // return actual bytes written.  If not, compiler will complain with warning
   //   n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", cfg.module, ESP.getChipId()); //ipAddress[3]);
 
-  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", cfg.module, ESP.getChipId());
+  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%d", cfg.module.c_str(), ESP.getChipId());
   if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
 
   if(WiFi.getMode() == WIFI_STA)
@@ -515,32 +531,11 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
     #ifdef _DEBUG
       Serial.println(var);
     #endif
-      if(var == "MODULE") return String(cfg.module);
-      else if(var == "WIFI_SSID") return String(cfg.ssid);
-      else if(var == "WIFI_PASS") return String(cfg.pass);
-      else if(var == "IP") return String(cfg.ip);
-      else if(var == "GATEWAY") return String(cfg.gateway);
-      else if(var == "MQTT_SERVER") return String(cfg.mqttServer);
-      else if(var == "MQTT_PORT") return String(cfg.mqttPort);
-      else if(var == "MQTT_USER") return String(cfg.mqttUser);
-      else if(var == "MQTT_PASS") return String(cfg.mqttPass);
-      else if(var == "OTA_PASS") return String(cfg.otaPass);
-      else if(var == "S0_NAME") return String(cfg.sensors[0].name);
-      else if(var == "S0_TYPE") return String(cfg.sensors[0].type);
-      else if(var == "S0_PIN0") return String(cfg.nameByPin(cfg.sensors[0].pin0));
-      else if(var == "S0_PIN1") return String(cfg.nameByPin(cfg.sensors[0].pin1));
-      else if(var == "S0_PIN2") return String(cfg.nameByPin(cfg.sensors[0].pin2));
-      else if(var == "S1_NAME") return String(cfg.sensors[1].name);
-      else if(var == "S1_TYPE") return String(cfg.sensors[1].type);
-      else if(var == "S1_PIN0") return String(cfg.nameByPin(cfg.sensors[1].pin0));
-      else if(var == "S1_PIN1") return String(cfg.nameByPin(cfg.sensors[1].pin1));
-      else if(var == "S1_PIN2") return String(cfg.nameByPin(cfg.sensors[1].pin2));
-      else if(var == "S2_NAME") return String(cfg.sensors[2].name);
-      else if(var == "S2_TYPE") return String(cfg.sensors[2].type);
-      else if(var == "S2_PIN0") return String(cfg.nameByPin(cfg.sensors[2].pin0));
-      else if(var == "S2_PIN1") return String(cfg.nameByPin(cfg.sensors[2].pin1));
-      else if(var == "S2_PIN2") return String(cfg.nameByPin(cfg.sensors[2].pin2));
-      else return String();
+
+      //TODO: pass cfg.doc as json string for certain variable in index.html
+      String buffer;
+      if(var == "CONFIG") serializeJsonPretty(cfg.doc, buffer);
+      return buffer;
     });
   });
 
@@ -557,77 +552,111 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
   _webServer.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/style.css", "text/css");
   });
-
-  _webServer.on("/", HTTP_POST, [&](AsyncWebServerRequest *request){
-    #ifdef _DEBUG
-      Serial.println("------------------------");
-      Serial.println("Config submission received");
-      // Serial.println(request->contentType());
-      Serial.println("------------------------");
-    #endif
-
-    String msg;
-    int nparams = request->params();
-    // Serial.printf("%d params sent in\n", nparams);
-    for (int i = 0; i < nparams; i++)
-    {
-      AsyncWebParameter *p = request->getParam(i);
-      if (p->isPost())
-      {
-          Serial.printf("%s: %s \n", p->name().c_str(), p->value().c_str());
-
-          if (p->name() == "module") p->value().toCharArray(cfg.module, sizeof(cfg.module)); //copy String over char array
-          if (p->name() == "ssid") p->value().toCharArray(cfg.ssid, sizeof(cfg.ssid));
-          if (p->name() == "pass") p->value().toCharArray(cfg.pass, sizeof(cfg.pass));
-          if (p->name() == "ip") p->value().toCharArray(cfg.ip, sizeof(cfg.ip));
-          if (p->name() == "gateway") p->value().toCharArray(cfg.gateway, sizeof(cfg.gateway));
-
-          if (p->name() == "mqttServer") p->value().toCharArray(cfg.mqttServer, sizeof(cfg.mqttServer));
-          if (p->name() == "mqttPort") cfg.mqttPort = atoi(p->value().c_str());
-          if (p->name() == "mqttUser") p->value().toCharArray(cfg.mqttUser, sizeof(cfg.mqttUser));
-          if (p->name() == "mqttPass") p->value().toCharArray(cfg.mqttPass, sizeof(cfg.mqttPass));
-          if (p->name() == "otaPass") p->value().toCharArray(cfg.otaPass, sizeof(cfg.otaPass));
-
-          if (p->name() == "s0_name") p->value().toCharArray(cfg.sensors[0].name, sizeof(cfg.sensors[0].name));
-          if (p->name() == "s0_type") p->value().toCharArray(cfg.sensors[0].type, sizeof(cfg.sensors[0].type));
-          if (p->name() == "s0_pin0") cfg.sensors[0].pin0 = cfg.pinByName(p->value().c_str());
-          if (p->name() == "s0_pin1") cfg.sensors[0].pin1 = cfg.pinByName(p->value().c_str());
-          if (p->name() == "s0_pin2") cfg.sensors[0].pin2 = cfg.pinByName(p->value().c_str());
-
-          if (p->name() == "s1_name") p->value().toCharArray(cfg.sensors[1].name, sizeof(cfg.sensors[1].name));
-          if (p->name() == "s1_type") p->value().toCharArray(cfg.sensors[1].type, sizeof(cfg.sensors[1].type));
-          if (p->name() == "s1_pin0") cfg.sensors[1].pin0 = cfg.pinByName(p->value().c_str());
-          if (p->name() == "s1_pin1") cfg.sensors[1].pin1 = cfg.pinByName(p->value().c_str());
-          if (p->name() == "s1_pin2") cfg.sensors[1].pin2 = cfg.pinByName(p->value().c_str());
-
-          if (p->name() == "s2_name") p->value().toCharArray(cfg.sensors[2].name, sizeof(cfg.sensors[2].name));
-          if (p->name() == "s2_type") p->value().toCharArray(cfg.sensors[2].type, sizeof(cfg.sensors[2].type));
-          if (p->name() == "s2_pin0") cfg.sensors[2].pin0 = cfg.pinByName(p->value().c_str());
-          if (p->name() == "s2_pin1") cfg.sensors[2].pin1 = cfg.pinByName(p->value().c_str());
-          if (p->name() == "s2_pin2") cfg.sensors[2].pin2 = cfg.pinByName(p->value().c_str());
-      }
-      // else if (p->isFile())
-      // {
-      //     Serial.printf("_FILE[%s]: %s, size: %u", p->name().c_str(), p->value().c_str(), p->size());
-      // }
-      // else
-      // {
-      //     Serial.printf("_GET[%s]: %s", p->name().c_str(), p->value().c_str());
-      // }
-    }
+  _webServer.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(LittleFS, "/bootstrap.min.css", "text/css");
+  });
+  _webServer.on("/jsoneditor.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(LittleFS, "/jsoneditor.min.js", "text/javascript");
+  });
+  _webServer.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request){
+    _restart();
+    request->send(200, "text/plain", "restarted");
+  });
+  _webServer.on("/reset_wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
+    Serial.println("reset wifi.");
     
-    // String msg;
-    // if(request->hasParam("module")) {
-    //   msg = request->getParam("module")->value(); msg.toCharArray(cfg.module, sizeof(cfg.module)); //copy String over char array
-    // }
-    
+    StensTimer *pTimer = StensTimer::getInstance(); 
+    pTimer->setTimer(this, ACT_RESET_WIFI, 100);
+
+    request->send(200, "text/plain", "reset wifi");
+  });
+
+  // NOTE: this on is using Json handler!! => AsyncCallbackJsonWebHandler
+  _webServer.addHandler(new AsyncCallbackJsonWebHandler("/api/config", [&](AsyncWebServerRequest *request, JsonVariant &json) {
+    String buffer;
+    serializeJsonPretty(json, buffer);
+    // Serial.println(buffer);
+
+    //TODO: validate the config json
+
+    deserializeJson(cfg.doc, buffer);
     cfg.saveConfig();
 
-    // send back the success web page.
-    request->send(LittleFS, "/success.html");
+    // send feedback to browser
+    request->send(200, "application/json", buffer);
 
-    closeConfigPortal();
-  });
+    closePortal();
+  }));
+
+  // _webServer.on("/", HTTP_POST, [&](AsyncWebServerRequest *request){
+  //   #ifdef _DEBUG
+  //     Serial.println("------------------------");
+  //     Serial.println("Config submission received");
+  //     // Serial.println(request->contentType());
+  //     Serial.println("------------------------");
+  //   #endif
+
+  //   String msg;
+  //   int nparams = request->params();
+  //   Serial.printf("%d params sent in\n", nparams);
+  //   for (int i = 0; i < nparams; i++)
+  //   {
+  //     AsyncWebParameter *p = request->getParam(i);
+  //     if (p->isPost())
+  //     {
+  //         Serial.printf("%s: %s \n", p->name().c_str(), p->value().c_str());
+
+  //         if (p->name() == "module") p->value().toCharArray(cfg.module, sizeof(cfg.module)); //copy String over char array
+  //         if (p->name() == "ssid") p->value().toCharArray(cfg.ssid, sizeof(cfg.ssid));
+  //         if (p->name() == "pass") p->value().toCharArray(cfg.pass, sizeof(cfg.pass));
+  //         if (p->name() == "ip") p->value().toCharArray(cfg.ip, sizeof(cfg.ip));
+  //         if (p->name() == "gateway") p->value().toCharArray(cfg.gateway, sizeof(cfg.gateway));
+
+  //         if (p->name() == "mqttServer") p->value().toCharArray(cfg.mqttServer, sizeof(cfg.mqttServer));
+  //         if (p->name() == "mqttPort") cfg.mqttPort = atoi(p->value().c_str());
+  //         if (p->name() == "mqttUser") p->value().toCharArray(cfg.mqttUser, sizeof(cfg.mqttUser));
+  //         if (p->name() == "mqttPass") p->value().toCharArray(cfg.mqttPass, sizeof(cfg.mqttPass));
+  //         if (p->name() == "otaPass") p->value().toCharArray(cfg.otaPass, sizeof(cfg.otaPass));
+
+  //         if (p->name() == "s0_name") p->value().toCharArray(cfg.sensors[0].name, sizeof(cfg.sensors[0].name));
+  //         if (p->name() == "s0_type") p->value().toCharArray(cfg.sensors[0].type, sizeof(cfg.sensors[0].type));
+  //         if (p->name() == "s0_pin0") cfg.sensors[0].pin0 = cfg.pinByName(p->value().c_str());
+  //         if (p->name() == "s0_pin1") cfg.sensors[0].pin1 = cfg.pinByName(p->value().c_str());
+  //         if (p->name() == "s0_pin2") cfg.sensors[0].pin2 = cfg.pinByName(p->value().c_str());
+
+  //         if (p->name() == "s1_name") p->value().toCharArray(cfg.sensors[1].name, sizeof(cfg.sensors[1].name));
+  //         if (p->name() == "s1_type") p->value().toCharArray(cfg.sensors[1].type, sizeof(cfg.sensors[1].type));
+  //         if (p->name() == "s1_pin0") cfg.sensors[1].pin0 = cfg.pinByName(p->value().c_str());
+  //         if (p->name() == "s1_pin1") cfg.sensors[1].pin1 = cfg.pinByName(p->value().c_str());
+  //         if (p->name() == "s1_pin2") cfg.sensors[1].pin2 = cfg.pinByName(p->value().c_str());
+
+  //         if (p->name() == "s2_name") p->value().toCharArray(cfg.sensors[2].name, sizeof(cfg.sensors[2].name));
+  //         if (p->name() == "s2_type") p->value().toCharArray(cfg.sensors[2].type, sizeof(cfg.sensors[2].type));
+  //         if (p->name() == "s2_pin0") cfg.sensors[2].pin0 = cfg.pinByName(p->value().c_str());
+  //         if (p->name() == "s2_pin1") cfg.sensors[2].pin1 = cfg.pinByName(p->value().c_str());
+  //         if (p->name() == "s2_pin2") cfg.sensors[2].pin2 = cfg.pinByName(p->value().c_str());
+  //     }
+  //     // else if (p->isFile())
+  //     // {
+  //     //     Serial.printf("_FILE[%s]: %s, size: %u", p->name().c_str(), p->value().c_str(), p->size());
+  //     // }
+  //     // else
+  //     // {
+  //     //     Serial.printf("_GET[%s]: %s", p->name().c_str(), p->value().c_str());
+  //     // }
+    
+  //   String msg;
+  //   if(request->hasParam("module")) {
+  //     msg = request->getParam("module")->value(); msg.toCharArray(cfg.module, sizeof(cfg.module)); //copy String over char array
+  //   }
+    
+  //   // cfg.saveConfig();
+
+  //   // send back the success web page.
+  //   request->send(LittleFS, "/success.html");
+
+  //   closePortal();
+  // });
 
   // Do not close the webserver, instead set it response 404 instead, then the webOTA is still on
   _webServer.onNotFound([](AsyncWebServerRequest *request) {
@@ -640,28 +669,28 @@ void EspClient::openConfigPortal(bool blocking) //char const *apName, char const
 
   Serial.println(F("---------------------------------------------------"));
   Serial.println(F("Config portal on:"));
-  if(_wifiConnected) Serial.printf("Browse http://%s/ or %s for portal, or\n", cfg.module, WiFi.localIP().toString().c_str());
-  Serial.printf("Connect to Wifi \"%s\" and browse http://%s/ or %s.\n", ssid, cfg.module, WiFi.softAPIP().toString().c_str());
+  if(_wifiConnected) Serial.printf("Browse http://%s/ or %s for portal, or\n", cfg.module.c_str(), WiFi.localIP().toString().c_str());
+  Serial.printf("Connect to Wifi \"%s\" and browse http://%s/ or %s.\n", ssid, cfg.module.c_str(), WiFi.softAPIP().toString().c_str());
   Serial.println(F("---------------------------------------------------"));
 
   if(blocking)
   {
     // blocking mode, open untill configuration done!
     Serial.println(F("Portal open on blocking mode."));
-    while(!_portalSubmitted)
+    while(_portalOn && !_portalSubmitted)
     {
       // consider just use loop(); or rethink if blocking is really useful?
       // _webServer.handleClient();
       pTimer->run(); // on blocking mode, need to handle timer logic to check timeout event!
       delay(1000);
     } 
-    closeConfigPortal();
+    closePortal();
   }
 
   first = false;
 }
 
-void EspClient::closeConfigPortal()
+void EspClient::closePortal()
 {
   if(!_portalOn)
   {
@@ -680,6 +709,7 @@ void EspClient::closeConfigPortal()
     WiFi.mode(WIFI_STA);
   }
 
+  //TODO: since changed the post endpoint (japi/config), change to a different handler!!
   // instead of turn off webserver, keep the web OTA on only for upstating.
   if(handler != NULL)
   {
@@ -712,7 +742,7 @@ void EspClient::timerCallback(Timer* timer)
         else
         {
           Serial.println(F("WIFI: not connected, open portal."));
-          openConfigPortal(true); // open portal in blocking mode
+          openPortal(); //true); // open portal in blocking mode, TODO: why? no need? If this blocking, the wificonneting in blocking mode stop working.
 
           // reconnect? Somethime WiFi AutoReconnect does not work!
           // Serial.println("WiFi: Reconnect!");
@@ -735,28 +765,28 @@ void EspClient::timerCallback(Timer* timer)
           // pTimer->deleteTimer(timer);
 
           #ifdef _DEBUG
-            Serial.println(F("MQTT: connected already."));
+            Serial.println(F("MQTT: connected already. Delete timer."));
           #endif
 
-          if(_pTimerReconnect != NULL)
-          {
-            pTimer->deleteTimer(_pTimerReconnect);
-            _pTimerReconnect = NULL;
-          }
+          pTimer->deleteTimer(_pTimerReconnect);
+          _pTimerReconnect = NULL;
 
         }else
         {
-          int repetitions = timer->getRepetitions();
-          if(repetitions > 1)
+          if(timer != NULL)
           {
-            // not reaching max number of reconnect try, reconnect again
-            _connectToMqttBroker();
-            Serial.print(F("Repetitions: "));
-            Serial.println(repetitions);
-          }else
-          {
-            // reach last one, open config portal
-            openConfigPortal();
+            int repetitions = timer->getRepetitions();
+            if(repetitions > 1)
+            {
+              // not reaching max number of reconnect try, reconnect again
+              _connectToMqttBroker();
+              Serial.println(F("Repetitions: "));
+              Serial.println(repetitions);
+            }else
+            {
+              // reach last one, open config portal
+              openPortal();
+            }
           }
         }
         break;
@@ -767,7 +797,7 @@ void EspClient::timerCallback(Timer* timer)
         #endif
 
         // check mqtt connection before subscribe. Sometime it disconnect
-        if(_mqttConnected && cfg.module[0] != '\0')
+        if(_mqttConnected)
         {
           String module = String(cfg.module);
           // module.toLowerCase();
@@ -790,7 +820,7 @@ void EspClient::timerCallback(Timer* timer)
         Serial.println(F("Portal closed on timeout"));
         Serial.println(F("----------------------------"));
         
-        closeConfigPortal();
+        closePortal();
         if(!isConnected()) _restart(RsCode::RS_DISCONNECT);
         break;
 
@@ -811,6 +841,10 @@ void EspClient::timerCallback(Timer* timer)
         _blink();
         break;
       }
+
+      case ACT_RESET_WIFI:
+        _resetWifi();
+        break;
         
       case ACT_MEASURE:
         #ifdef _DEBUG
@@ -838,24 +872,26 @@ void EspClient::_blink()
 
 void EspClient::_measure()
 {
-  for(int i=0; i<MAX_SENSORS; i++)
+  //for(int i=0; i<MAX_SENSORS; i++)
+  for(Sensor * pSensor : _sensors)
   {
-    if(_sensors[i] != NULL && isConnected())
-      _sensors[i]->sendMeasure();
+    if(pSensor != NULL && isConnected())
+      pSensor->sendMeasure();
   }
 }
 
 void EspClient::_enableSensor(const char* name, bool enable)
 {
-  for(int i=0; i<MAX_SENSORS; i++)
+  // for(int i=0; i<MAX_SENSORS; i++)
+  for(Sensor * pSensor : _sensors)
   {
-    if(_sensors[i] != NULL && strcmp(name, _sensors[i]->name) == 0)
+    if(pSensor != NULL && strcmp(name, pSensor->name) == 0)
     {
       Serial.print(name);
       Serial.print(F(" sensor enabled: "));
       Serial.println(enable);
 
-      _sensors[i]->enable(enable);
+      pSensor->enable(enable);
     }
   }
 }
@@ -873,15 +909,16 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
       Serial.println(F("Open portal in _cmdHandler()"));
     #endif
 
-    EspClient::instance().openConfigPortal();
+    openPortal();
   }
   else if(strcmp(topic, CMD_SSR_FILTER) == 0)
   {
     int filter = atoi(payload);
 
-    for(int i=0; i<MAX_SENSORS; i++)
+    // for(int i=0; i<MAX_SENSORS; i++)
+    for(Sensor * pSensor : _sensors)
     {
-      if(_sensors[i] != NULL) _sensors[i]->setFilter((FilterType)filter);
+      if(pSensor != NULL) pSensor->setFilter((FilterType)filter);
     }
   }
   else if(strcmp(topic, CMD_LED_BLINK) == 0)
@@ -904,8 +941,15 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
     // reset the interval of the timer
     _timer_sensor->setDelay(atoi(payload)*1000);
 
-  }else if(strcmp(topic, CMD_RESTART) == 0)
+  }
+  else if(strcmp(topic, CMD_RESTART) == 0)
   {
+    _restart();
+
+  }
+  else if(strcmp(topic, CMD_RESET_WIFI) == 0)
+  {
+    _resetWifi();
     _restart();
   }
   else if(strstr(topic, "/cmd/on/") != NULL)
@@ -915,13 +959,13 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
 
       if(ptr != NULL)
       {
-        Serial.print("Sensor: "); Serial.println(ptr+1);
+        Serial.print(F("Sensor: ")); Serial.println(ptr+1);
         _enableSensor(ptr+1, strcmp(payload, "true") == 0);
       }
       
   //     char *pch = strstr(topic, "/sensor/");
   //     const char* sensorName = pch + sizeof("/sensor/");
-  //     Serial.print("Sensor: "); Serial.println(sensorName);
+  //     Serial.print(F("Sensor: ")); Serial.println(sensorName);
   //     _enableSensor(sensorName, strcmp(payload, "true") == 0);
 
   }
@@ -974,15 +1018,16 @@ void EspClient::_restart(RsCode code)
   // stop OTA (Seems AruinoOTA does not have a end() to call)
   // ArduinoOTA.end();
   
-  // disconnect Wifi
-  WiFi.disconnect(true);  // Force disconnect.
-  WiFi.mode(WIFI_OFF);    // Turen off wifi radio
-  WiFi.persistent(false); // Avoid to store Wifi configuration in Flash
+  // // disconnect Wifi
+  // WiFi.disconnect(true);  // Force disconnect.
+  // WiFi.mode(WIFI_OFF);    // Turen off wifi radio
+  // WiFi.persistent(false); // Avoid to store Wifi configuration in Flash
 
   //elete all sensor objects in _sensors[]
-  for(int i=0; i<MAX_SENSORS; i++)
+  // for(int i=0; i<MAX_SENSORS; i++)
+  for(Sensor * pSensor : _sensors)
   {
-    if(_sensors[i] != NULL) delete _sensors[i];
+    if(pSensor != NULL) delete pSensor;
   }
 
   #ifdef ESP8266
@@ -994,6 +1039,33 @@ void EspClient::_restart(RsCode code)
   #endif
 }
 
+// Adapted from https://github.com/tzapu/WiFiManager/blob/master/WiFiManager.cpp
+// which is to earase wifi credentials from flash
+void EspClient::_resetWifi()
+{
+  #ifdef _DEBUG
+    Serial.println(F("---------------"));
+    Serial.println("WiFi: Reset");
+    Serial.println(F("---------------"));
+  #endif
+  
+  closePortal();
+  WiFi.mode(WIFI_STA); // must be sta to disconnect erase
+  delay(500); // ensure sta is enabled
+  
+  #ifdef ESP32
+    WiFi.disconnect(true,true);
+  #else
+    WiFi.persistent(true);
+    WiFi.disconnect(true);
+    WiFi.persistent(false);
+
+    WiFi.reconnect();
+  #endif
+
+  // delay(2000);
+  //_restart();
+}
 
 /*
 https://www.includehelp.com/c-programs/format-ip-address-octets.aspx

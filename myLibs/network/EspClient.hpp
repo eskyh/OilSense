@@ -8,6 +8,7 @@
 #include "Config.hpp"
 
 #include "ESPAsyncWebServer.h"
+#include "vector"
 
 #ifdef ESP8266
   #include <ESP8266WiFi.h>
@@ -45,6 +46,7 @@
 #define CMD_MEASURE     "/cmd/measure"
 #define CMD_INTERVAL    "/cmd/interval"
 #define CMD_RESTART     "/cmd/restart"
+#define CMD_RESET_WIFI  "/cmd/reset_wifi"  // earase wifi credential from flash
 #define CMD_SSR_FILTER  "/cmd/filter"
 
 // #define CMD_SSR_SR04    "/cmd/on/sr04"  // turn on/off the measure
@@ -87,8 +89,8 @@ class EspClient : public IStensTimerListener
     inline bool isConnected() const { return _wifiConnected && _mqttConnected; }; // Return true if everything is connected
 
     // Portal    
-    void openConfigPortal(bool blocking=false);
-    void closeConfigPortal();
+    void openPortal(bool blocking=false);
+    void closePortal();
 
     void setup();
     void loop(); // Main loop, to call at each sketch loop()
@@ -146,7 +148,7 @@ class EspClient : public IStensTimerListener
     
     void _setupOTA();
 
-    void _connectToWifi(bool blocking=false);
+    void _connectToWifi(bool blocking=true);
     void _connectToMqttBroker();
 
     void _cmdHandler(const char* topic, const char* payload);
@@ -158,19 +160,21 @@ class EspClient : public IStensTimerListener
       ACT_WIFI_CONNECT_TIMEOUT,  // wait for WIFI connect time out
       ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
       ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
-      ACT_CLOSE_PORTAL          // Config portal open time out (i.e., 120s after open)
+      ACT_CLOSE_PORTAL,          // Config portal open time out (i.e., 120s after open)
+      ACT_RESET_WIFI
     };
 
     // Sensors
     bool _ledBlink = true;
     bool _autoMode = true;
     Timer* _timer_sensor = NULL; // timer to control measure interval
-    Sensor *_sensors[MAX_SENSORS] = {NULL}; // initialized all with NULL
+    std::vector<Sensor*> _sensors;
     void _initSensors();
     void _enableSensor(const char* name, bool enable);
     void _measure();
     void _blink();
 
     // Utility functions
+    void _resetWifi();
     // static void _extractIpAddress(const char* sourceString, short* ipAddress);
 };

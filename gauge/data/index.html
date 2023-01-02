@@ -25,32 +25,21 @@
         Try yourself, submit the form and look in the network tab of the developer tool.
     </p>
     <div class="form-group"></div>
-    <!-- <form action="/docs/form-submission.html" method="get"> -->
-        <!-- <input id="input" type="hidden" name="json"> -->
-				<!-- <textarea id="input" name="json" rows="10" cols="50"></textarea> -->
-        <!-- <div id='editor-container'></div> -->
-        <!-- <input id="submit" class="btn btn-primary" width="100" type="submit"> -->
-    <!-- </form> -->
 
 		<form action='/api/config' method='post' id='config'>
 			<input type='hidden' name='config' value='configuration'>
 			<div id='editor-container'></div>
-			<button id='save' type='button' class="btn btn-primary" width="100">Save</button> <!-- do not use type='submit' as ajax is to be used -->
+			<button id='save' type='button' class="btn btn-primary" width="100">Save</button> <!-- do not use type='submit' as we use ajax -->
 		</form>
 		
 		<hr>
 		
-		<form action='/restart' method='get'>
-			<button id='restart' type='button' class="btn btn-primary" width="100">Restart</button>
-		</form>
-
-		<form action='/reset_wifi' method='get'>
-			<button id='reset_wifi' type='button' class="btn btn-primary" width="100">Reset Wifi</button>
-		</form>
+		<button id='restart' type='button' class="btn btn-primary" width="100">Restart</button>
+		<button id='reset_wifi' type='button' class="btn btn-primary" width="100">Reset Wifi</button>
 
     <br>
 		<div> 
-		<p><b>Real-time Json-form (synchronized with the form settings:</b></p>
+		<p><b>Real-time Json-form</b> (synchronized with the form settings):</p>
 		<textarea id="post" name="json" rows="10" cols="100"></textarea>
 		</div>
 		
@@ -73,32 +62,6 @@
 <script>
 
 var config = `%CONFIG%`;
-
-/*
-var config = `
-{
-	"module":"Demo",
-	"wifi": {
-		"ssid":"ESky",
-		"pass":"Hcjwin66"
-	},
-	"ip":"",
-	"gateway":"",
-	"otapass":"Hcjmosaic@66",
-  "mqtt":{
-		"server":"raspberrypi.local",
-		"port":1883,
-		"user":"cjjiot",
-		"pass":"Hcjmosaic@66"
-	},
-  "sensors":[
-	 {"type":"HC-SR04","name":"sr04","pins": ["D1","D2"]},
-	 {"type":"VL53L0X","name":"vl53"},
-	 {"type":"DHT11","name":"dh11","pins":["D5"]}
-	]
-}
-`;
-*/
 
 var form = document.getElementById('config')
 
