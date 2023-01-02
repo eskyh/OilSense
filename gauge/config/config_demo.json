@@ -6,6 +6,7 @@
     },
     "ip": "",
     "gateway": "",
+		"appass": "@1234567",
     "otapass": "Hcjmosaic@66",
     "mqtt": {
         "server": "raspberrypi.local",
@@ -15,7 +16,7 @@
     },
     "sensors": [
 			{"type": "HC-SR04", "name": "sr04", "pins": ["D1", "D2"]},
-			{"type": "VL53L0X", "name": "vl53", "pins": []},
+			{"type": "VL53L0X", "name": "vl53"},
 			{"type": "DHT11", "name": "dh11", "pins": ["D5"]}
     ]
 }

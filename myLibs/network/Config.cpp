@@ -89,6 +89,7 @@ bool Config::loadConfig(const char *filename)
   pass = doc["wifi"]["pass"].as<String>();  // Serial.printf("PASS %s\n", pass.c_str());
   ip = doc["ip"].as<String>();              // Serial.printf("IP %s\n", ip.c_str());
   gateway = doc["gateway"].as<String>();    // Serial.printf("GATEWAY %s\n", gateway.c_str());
+  appass = doc["appass"].as<String>();
 
   // MQTT broker
   // char mqttClient[25];  // use the module name instead
@@ -151,139 +152,6 @@ bool Config::saveConfig(const char *filename)
 
   return false;
 }
-
-// void Config::copyJson(StaticJsonDocument<JSON_CAPACITY> &doc)
-// {
-//   // copy string value to the settings
-//   const char *_module = doc["module"]; strncpy(module, _module, sizeof(module));
-//   const char *_ssid = doc["wifi"]["ssid"]; strncpy(ssid, _ssid, sizeof(ssid));
-//   const char *_pass = doc["wifi"]["pass"]; strncpy(pass, _pass, sizeof(pass));
-
-//   const char *_ip = doc["ip"]; strncpy(ip, _ip, sizeof(ip));
-//   const char *_gateway = doc["gateway"]; strncpy(gateway, _gateway, sizeof(gateway));
-  
-//   const char *_mqttServer = doc["mqtt"]["server"]; strncpy(mqttServer, _mqttServer, sizeof(mqttServer));
-//   mqttPort = doc["mqtt"]["port"];
-//   const char *_mqttUser = doc["mqtt"]["user"]; strncpy(mqttUser, _mqttUser, sizeof(mqttUser));
-//   const char *_mqttPass = doc["mqtt"]["pass"]; strncpy(mqttPass, _mqttPass, sizeof(mqttPass));
-
-//   const char *_otaPass = doc["otapass"]; strncpy(otaPass, _otaPass, sizeof(otaPass));
-
-//   const JsonArray& jsSensors =  doc["sensors"];
-
-//   // for (auto sensor : sensors)
-//   for (int i=0, size=MIN(jsSensors.size(),MAX_SENSORS); i<size; i++)
-//   {
-//     const char *_name = jsSensors[i]["name"]; strncpy(sensors[i].name, _name, sizeof(sensors[i].name));
-//     const char *_type = jsSensors[i]["type"]; strncpy(sensors[i].type, _type, sizeof(sensors[i].type));
-
-//     if(strcmp(_type, "HC-SR04") == 0)
-//     {
-//       sensors[i].pin0 = pinByName(jsSensors[i]["pinTrig"]);
-//       sensors[i].pin1 = pinByName(jsSensors[i]["pinEcho"]);
-
-//     }else if(strcmp(_type, "VL53L0X") == 0)
-//     {
-//       // no pin needed
-
-//     }else if(strcmp(_type, "DHT11") == 0)
-//     {
-//       sensors[i].pin0 = pinByName(jsSensors[i]["pinData"]);
-//     }else
-//     {
-//       Serial.print(F("Wrong sensor type: ")); Serial.println(_type);
-//     }
-//   }
-  
-//   // check https://arduinojson.org/
-//   // strncpy(ip, doc["ip"].as<const char*>(), sizeof(ip));
-//   // strncpy(mqttServer, doc["mqtt"]["server"].as<const char*>(), sizeof(module));
-//   // mqttPort = doc["mqtt"]["port"].as<uint8_t>();
-// }
-
-// void Config::buildJson(StaticJsonDocument<JSON_CAPACITY> &doc)
-// {
-//   doc["module"] = module;
-  
-//   doc["wifi"]["ssid"] = ssid;
-//   doc["wifi"]["pass"] = pass;
-
-//   doc["ip"] = ip;
-//   doc["gateway"] = gateway;
-
-//   doc["mqtt"]["server"] = mqttServer;
-//   doc["mqtt"]["port"] = mqttPort;
-//   doc["mqtt"]["user"] = mqttUser;
-//   doc["mqtt"]["pass"] = mqttPass;
-
-//   doc["otapass"] = otaPass;
-
-//   StaticJsonDocument<MAX_SENSORS*200> docSensors;
-//   JsonArray array = docSensors.to<JsonArray>();
-
-//   for(int i=0; i<MAX_SENSORS; i++)
-//   {
-//     if(sensors[i].type[0] != '\0')
-//     {
-//         JsonObject nested = array.createNestedObject();
-//         nested["name"] = sensors[i].name;
-//         nested["type"] = sensors[i].type;
-
-//         if(strcmp(sensors[i].type, "HC-SR04") == 0)
-//         {
-//           nested["pinTrig"] = nameByPin(sensors[i].pin0);
-//           nested["pinEcho"] = nameByPin(sensors[i].pin1);
-//         }else if(strcmp(sensors[i].type, "VL53L0X") == 0)
-//         {
-//           // no pin needed
-//         }else if(strcmp(sensors[i].type, "DHT11") == 0)
-//         {
-//           nested["pinData"] = nameByPin(sensors[i].pin0);
-//         }else
-//         {
-//           Serial.print(F("Wrong sensor type: ")); Serial.println(sensors[i].type);
-//         }
-//         //serializeJson(array, Serial);
-//     }
-//   }
-
-//   doc["sensors"] = docSensors;
-// }
-
-// #ifdef _DEBUG
-// void Config::printConfig(bool json)
-// {
-//   Serial.println(F("----------------------------"));
-//   Serial.println(F("Configuration"));
-//   Serial.println(F("----------------------------"));
-//   if(json)
-//   {
-//     // DynamicJsonDocument doc(JSON_CAPACITY);
-//     StaticJsonDocument<JSON_CAPACITY> doc;
-//     buildJson(doc);
-
-//     serializeJsonPretty(doc, Serial);
-//     Serial.println();
-//   }else
-//   {
-//     Serial.printf("Module\t: [%s]\n", module);
-//     Serial.printf("SSID\t: [%s]\n", ssid);
-//     Serial.printf("pass\t: [%s]\n", pass);
-//     Serial.printf("IP\t: [%s]\n", ip);
-//     Serial.printf("Gateway\t: [%s]\n", gateway);
-//     Serial.printf("MQTT\t: [%s:%d]\n", mqttServer, mqttPort);
-//     Serial.printf("user\t: [%s]\n", mqttUser);
-//     Serial.printf("pass\t: [%s]\n", mqttPass);
-//     Serial.printf("OTApass\t: [%s]\n", otaPass);
-
-//     for(int i=0; i<MAX_SENSORS; i++)
-//     {
-//       Serial.print("--Sensor "); Serial.println(i);
-//       sensors[i].print();
-//     }
-//   }
-//   Serial.println(F("----------------------------"));
-// }
 
 #ifdef _DEBUG
 

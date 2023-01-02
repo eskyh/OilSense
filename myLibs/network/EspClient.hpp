@@ -67,9 +67,9 @@
 
 #define MQTT_MAX_TRY             15     // Max number of MQTT connect tries before ask for turn on portal
 #define MQTT_RECONNECT_INTERVAL  2e3    // Time interval between each MQTT reconnection attempt, 2s by default
+#define MQTT_RECONNECT_INTERVAL_LONG  10e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_SUBSCRIBE_DELAY     1e3    // MQTT subscribe attempt delay after connected
 #define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout, 20s bu default
-#define PORTAL_TIMEOUT           300e3  // Configuration portal timeout, 5min by default (leave enough time for web OTA uploading when wifi is down)
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
@@ -89,8 +89,7 @@ class EspClient : public IStensTimerListener
     inline bool isConnected() const { return _wifiConnected && _mqttConnected; }; // Return true if everything is connected
 
     // Portal    
-    void openPortal(bool blocking=false);
-    void closePortal();
+    void setupPortal(bool blocking=false);
 
     void setup();
     void loop(); // Main loop, to call at each sketch loop()
@@ -140,7 +139,7 @@ class EspClient : public IStensTimerListener
     void _setupWifi();
 
     // MQTT related
-    Timer *_pTimerReconnect = NULL;
+    bool _mqttReconnectOn = false;
     bool _mqttConnected = false;
     void _setupMQTT();
 
@@ -150,6 +149,9 @@ class EspClient : public IStensTimerListener
 
     void _connectToWifi(bool blocking=true);
     void _connectToMqttBroker();
+  #ifdef _DEBUG
+    void _printMqttDisconnectReason(AsyncMqttClientDisconnectReason reason);
+  #endif
 
     void _cmdHandler(const char* topic, const char* payload);
 
@@ -160,8 +162,8 @@ class EspClient : public IStensTimerListener
       ACT_WIFI_CONNECT_TIMEOUT,  // wait for WIFI connect time out
       ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
       ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
-      ACT_CLOSE_PORTAL,          // Config portal open time out (i.e., 120s after open)
-      ACT_RESET_WIFI
+      ACT_CLOSE_PORTAL          // Config portal open time out (i.e., 120s after open)
+      // ACT_RESET_WIFI
     };
 
     // Sensors
@@ -175,6 +177,12 @@ class EspClient : public IStensTimerListener
     void _blink();
 
     // Utility functions
-    void _resetWifi();
+    // void _resetWifi();
     // static void _extractIpAddress(const char* sourceString, short* ipAddress);
+
+    void _printLine() {
+      #ifdef _DEBUG
+        Serial.println(F("----------------------------------------------"));
+      #endif
+    }
 };

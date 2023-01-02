@@ -6,6 +6,7 @@
     },
     "ip": "",
     "gateway": "",
+		"appass": "@1234567",
     "otapass": "Hcjmosaic@66",
     "mqtt": {
         "server": "raspberrypi.local",

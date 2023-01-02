@@ -49,6 +49,7 @@ class Config
     String pass;
     String ip;
     String gateway;
+    String appass; // SoftAP pass
 
     // MQTT broker
     // char mqttClient[25];  // use the module name instead
