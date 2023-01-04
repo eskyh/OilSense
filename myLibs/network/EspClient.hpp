@@ -162,8 +162,9 @@ class EspClient : public IStensTimerListener
       ACT_WIFI_CONNECT_TIMEOUT,  // wait for WIFI connect time out
       ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
       ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
-      ACT_CLOSE_PORTAL          // Config portal open time out (i.e., 120s after open)
+      ACT_CLOSE_PORTAL,          // Config portal open time out (i.e., 120s after open)
       // ACT_RESET_WIFI
+      ACT_CMD_RESTART
     };
 
     // Sensors

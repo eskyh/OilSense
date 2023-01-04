@@ -89,7 +89,8 @@ bool Config::loadConfig(const char *filename)
   pass = doc["wifi"]["pass"].as<String>();  // Serial.printf("PASS %s\n", pass.c_str());
   ip = doc["ip"].as<String>();              // Serial.printf("IP %s\n", ip.c_str());
   gateway = doc["gateway"].as<String>();    // Serial.printf("GATEWAY %s\n", gateway.c_str());
-  appass = doc["appass"].as<String>();
+  apPass = doc["appass"].as<String>();
+  otaPass = doc["otapass"].as<String>();
 
   // MQTT broker
   // char mqttClient[25];  // use the module name instead

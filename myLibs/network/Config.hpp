@@ -49,7 +49,9 @@ class Config
     String pass;
     String ip;
     String gateway;
-    String appass; // SoftAP pass
+
+    String apPass; // SoftAP pass
+    String otaPass; // OTA pass
 
     // MQTT broker
     // char mqttClient[25];  // use the module name instead
@@ -60,7 +62,7 @@ class Config
 
     // OTA host name and pass
     // char otaHost[40]; // use module name instead
-    String otaPass;
+    
 
     // // Sensor config
     // CfgSensor sensors[MAX_SENSORS];

@@ -118,12 +118,10 @@ void EspClient::_connectToWifi(bool blocking)
     #error Platform not supported
   #endif
 
-  // Wnable WiFi station mode
+  // Wnable WiFi station mode <= this is done in _setupWiFi()
   // WiFiMode_t mode = WiFi.getMode();
   // if(mode == WIFI_OFF) WiFi.mode(WIFI_STA);
   // else if(mode == WIFI_AP) WiFi.mode(WIFI_AP_STA);
-
-  WiFi.mode(WIFI_AP_STA);
     
   // check if static ip address configured (non-empty)
   if(cfg.ip != "")
@@ -179,6 +177,12 @@ void EspClient::_setupWifi()
   #ifdef _DEBUG
     Serial.println("_setupWifi()");
   #endif
+
+  // Set WiFi to station mode
+  WiFi.mode(WIFI_AP_STA);
+    // Disconnect from an AP if it was previously connected
+  // WiFi.disconnect();
+  // delay(100);
 
   // Set up WiFi even handler. NOTE:
   // 1. Must save the handler returned, otherwise it will be auto deleted and won't catch up any events
@@ -353,9 +357,11 @@ void EspClient::_setupOTA()
   // ArduinoOTA.setPort(8266);
 
   // Hostname defaults to esp8266-[ChipID]
+  Serial.print("otaName:"); Serial.println(cfg.module.c_str());
   ArduinoOTA.setHostname(cfg.module.c_str());
 
   // No authentication by default
+  Serial.print("otaPass:"); Serial.println(cfg.otaPass.c_str());
   ArduinoOTA.setPassword(cfg.otaPass.c_str());
 
   // Password can be set with it's md5 value as well
@@ -422,20 +428,96 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%zu", cfg.module.c_str(), ESP.getChipId());
   if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
 
-  // Enable WiFi AP mode
+  // Enable WiFi AP mode  <= This is done in _setupWiFi()
   // WiFiMode_t mode = WiFi.getMode();
   // if(mode == WIFI_OFF) WiFi.mode(WIFI_AP);
   // else if(mode == WIFI_STA) WiFi.mode(WIFI_AP_STA);
-  WiFi.mode(WIFI_AP_STA);
+  // WiFi.mode(WIFI_AP_STA);
 
   _printLine();
-  Serial.print("AP: "); Serial.print(ssid); Serial.println(cfg.appass.c_str());
+  Serial.printf("AP: "); Serial.println(ssid);
   _printLine();
 
-  WiFi.softAP(ssid, cfg.appass); // wpa2 requires an (exact) 8 character password.
+  WiFi.softAP(ssid, cfg.apPass); // wpa2 requires an (exact) 8 character password.
+
+  
+  // -- setup web handlers ------------------------------
+  _webServer.on(PSTR("/api/files/list"), HTTP_GET, [](AsyncWebServerRequest *request) {
+    Serial.println("Got list");
+
+    String JSON;
+    StaticJsonDocument<1000> jsonBuffer;
+    JsonArray files = jsonBuffer.createNestedArray("files");
+ 
+    //get file listing
+    Dir dir = LittleFS.openDir("");
+    while (dir.next())
+        files.add(dir.fileName()); //.substring(1));
+
+    //get used and total data
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    jsonBuffer["used"] = String(fs_info.usedBytes);
+    jsonBuffer["max"] = String(fs_info.totalBytes);
+    serializeJson(jsonBuffer, JSON);
+    Serial.println(JSON);
+    request->send(200, PSTR("text/html"), JSON);
+  });
+
+  _webServer.on(PSTR("/api/files/upload"), HTTP_POST, [](AsyncWebServerRequest *request) {},
+    [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+
+    static File fsUploadFile;
+
+    if (!index)
+    {
+        Serial.println(PSTR("Start file upload"));
+        Serial.println(filename);
+
+        if (!filename.startsWith("/"))
+            filename = "/" + filename;
+
+        // Delete existing file, otherwise it will appended to the file
+        if(LittleFS.exists(filename)) LittleFS.remove(filename);
+
+        fsUploadFile = LittleFS.open(filename, "w");
+    }
+
+    for (size_t i = 0; i < len; i++)
+    {
+        fsUploadFile.write(data[i]);
+    }
+
+    if (final)
+    {
+        String JSON;
+        StaticJsonDocument<100> jsonBuffer;
+
+        jsonBuffer["success"] = fsUploadFile.isFile();
+        serializeJson(jsonBuffer, JSON);
+
+        request->send(200, PSTR("text/html"), JSON);
+        fsUploadFile.close();       
+    }
+  });
+
+  //remove file
+  _webServer.on(PSTR("/api/files/remove"), HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("filename", true))
+    {
+      #ifdef _DEBUG
+      Serial.print("filename: "); Serial.println(request->getParam("filename", true)->value());
+      #endif
+      LittleFS.remove("/" + request->getParam("filename", true)->value());
+      request->send(200, PSTR("text/html"), "File removed.");
+    }else
+    {
+      request->send(500, PSTR("text/html"), "File does not exists!");
+    }
+  });
 
   // Route for root / web page
-  AsyncCallbackWebHandler& rhandler = _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+  _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/index.html", String(), false, [](const String& var){
     #ifdef _DEBUG
       Serial.println(var);
@@ -451,16 +533,32 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   _webServer.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/style.css", "text/css");
   });
+
+  // it seems /bootstrap.min.css.gz does not work while jsoneditor.min.js.gz does work. Wired!
   _webServer.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/bootstrap.min.css", "text/css");
+    // Serial.println("Send /bootstrap.min.css");
+    // AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/bootstrap.min.css.gz", "text/html", false);
+    // response->addHeader("Content-Encoding", "gzip");
+    // request->send(response);
   });
+
+  // also it seems .gz works on other browsers but Safari which need chagne .gz to .jgz to work!
   _webServer.on("/jsoneditor.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/jsoneditor.min.js", "text/javascript");
+    //request->send(LittleFS, "/jsoneditor.min.js", "text/javascript");
+    Serial.println("Send /jsoneditor.min.css");
+    AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/jsoneditor.min.js.jgz", "text/html", false);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);    
   });
+
   _webServer.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request){
-    _restart();
-    request->send(200, "text/plain", "restarted");
+    request->send(200, "text/plain", "Restarted");
+
+    StensTimer *pTimer = StensTimer::getInstance(); 
+    pTimer->setTimer(this, ACT_CMD_RESTART, 100);
   });
+
   // _webServer.on("/reset_wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
   //   Serial.println("reset wifi.");
     
@@ -510,8 +608,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     Serial.println(F("Portal open on blocking mode."));
     while(_portalOn && !_portalSubmitted)
     {
-      // TODO: consider just use loop(); or rethink if blocking is really useful?
-      loop(); //pTimer->run(); // on blocking mode, need to handle timer logic to check timeout event!
+      loop();
       delay(1000);
     } 
   }
@@ -532,9 +629,9 @@ void EspClient::timerCallback(Timer* timer)
         break;
       }
 
-      // case ACT_RESET_WIFI:
-      //   _resetWifi();
-      //   break;
+      case ACT_CMD_RESTART:
+        _restart();
+        break;
         
       case ACT_MEASURE:
         #ifdef _DEBUG
@@ -635,7 +732,7 @@ void EspClient::_measure()
 void EspClient::_enableSensor(const char* name, bool enable)
 {
   // for(int i=0; i<MAX_SENSORS; i++)
-  for(Sensor * pSensor : _sensors)
+  for(Sensor *pSensor : _sensors)
   {
     if(pSensor != NULL && strcmp(name, pSensor->name) == 0)
     {
@@ -691,7 +788,6 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   else if(strcmp(topic, CMD_RESTART) == 0)
   {
     _restart();
-
   }
   // else if(strcmp(topic, CMD_RESET_WIFI) == 0)
   // {
@@ -772,28 +868,3 @@ void EspClient::_restart(RsCode code)
       #error Platform not supported
   #endif
 }
-
-// Adapted from https://github.com/tzapu/WiFiManager/blob/master/WiFiManager.cpp
-// which is to earase wifi credentials from flash
-// void EspClient::_resetWifi()
-// {
-//   _printLine();
-//   Serial.println("WiFi: Reset");
-//   _printLine();
-  
-//   WiFi.mode(WIFI_STA); // must be sta to disconnect erase
-//   delay(500); // ensure sta is enabled
-  
-//   #ifdef ESP32
-//     WiFi.disconnect(true,true);
-//   #else
-//     WiFi.persistent(true);
-//     WiFi.disconnect(true);
-//     WiFi.persistent(false);
-
-//     WiFi.reconnect();
-//   #endif
-
-//   // delay(2000);
-//   //_restart();
-// }
