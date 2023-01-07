@@ -43,7 +43,7 @@ void EspClient::setup()
   _setupOTA(); // only set up OTA when got IP?
   _setupMQTT();
   
-  _connectToWifi(true); // blocking mode  
+  _connectToWifi();
 
   _initSensors();
 
@@ -105,10 +105,12 @@ void EspClient::loop()
 
   // if(_wifiConnected) 
   ArduinoOTA.handle(); // OTA does not need wifi connected (AP also fine)
+
+  delay(1); 
 }
 
 // Initiate a Wifi connection
-void EspClient::_connectToWifi(bool blocking)
+void EspClient::_connectToWifi()
 {
   #ifdef ESP8266
     WiFi.hostname(cfg.module.c_str());
@@ -148,17 +150,71 @@ void EspClient::_connectToWifi(bool blocking)
     }
   }
 
-  WiFi.begin(cfg.ssid.c_str(), cfg.pass.c_str());
+  Serial.println(F("Starting WiFi scan..."));
+  int scanResult = WiFi.scanNetworks(/*async=*/false, /*hidden=*/true);
 
-  // set timmer for Wifi connect timeout in 120s (will open portal in blocking mode!!)
-  StensTimer *pTimer = StensTimer::getInstance(); 
-  pTimer->setTimer(this, ACT_WIFI_CONNECT_TIMEOUT, WIFI_CONNECTING_TIMEOUT);
+  if (scanResult == 0) {
+    Serial.println(F("No networks found"));
+  } else if (scanResult > 0) {
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    loop();
-    delay(1000);
-    Serial.print(WiFi.status());
+    #ifdef _DEBUG
+    String ssid;
+    int32_t rssi;
+    uint8_t encryptionType;
+    uint8_t* bssid;
+    int32_t channel;
+    bool hidden;
+
+    Serial.printf(PSTR("%d networks found:\n"), scanResult);
+
+    // Print unsorted scan results
+    for (int8_t i = 0; i < scanResult; i++) {
+      WiFi.getNetworkInfo(i, ssid, encryptionType, rssi, bssid, channel, hidden);
+
+      Serial.printf(PSTR("  %02d: [CH %02d] [%02X:%02X:%02X:%02X:%02X:%02X] %ddBm %c %c %s\n"),
+                    i,
+                    channel,
+                    bssid[0], bssid[1], bssid[2],
+                    bssid[3], bssid[4], bssid[5],
+                    rssi,
+                    (encryptionType == ENC_TYPE_NONE) ? ' ' : '*',
+                    hidden ? 'H' : 'V',
+                    ssid.c_str());
+      delay(0);
+    }
+    #endif
+
+    if ( WiFi.status() != WL_CONNECTED )
+    {
+      #ifdef _DEBUG
+      Serial.println(F("WIFI_OFF = 0, WIFI_STA = 1, WIFI_AP = 2, WIFI_AP_STA = 3"));
+      Serial.print(F("WiFi mode: "));
+      Serial.println(WiFi.getMode());
+      Serial.println();
+
+    // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
+      Serial.println(F("0 : WL_IDLE_STATUS when Wi-Fi is in process of changing between statuses"));
+      Serial.println(F("1 : WL_NO_SSID_AVAIL in case configured SSID cannot be reached"));
+      Serial.println(F("3 : WL_CONNECTED after successful connection is established"));
+      Serial.println(F("4 : WL_CONNECT_FAILED if connection failed"));
+      Serial.println(F("6 : WL_CONNECT_WRONG_PASSWORD if password is incorrect"));
+      Serial.println(F("7 : WL_DISCONNECTED if module is not configured in station mode\n"));
+      Serial.print(F("WiFi status:"));
+      #endif
+
+      WiFi.begin(cfg.ssid.c_str(), cfg.pass.c_str());
+
+      // set timmer for Wifi connect timeout in 120s (will open portal in blocking mode!!)
+      StensTimer *pTimer = StensTimer::getInstance(); 
+      pTimer->setTimer(this, ACT_WIFI_CONNECT_TIMEOUT, WIFI_CONNECTING_TIMEOUT);
+
+      while (WiFi.status() != WL_CONNECTED)
+      {
+        loop();
+        Serial.print(WiFi.status());
+        delay(1000);
+      }
+    }
   }
 
   WiFi.setAutoReconnect(true);    // Set whether module will attempt to reconnect to an access point in case it is disconnected.
@@ -179,10 +235,11 @@ void EspClient::_setupWifi()
   #endif
 
   // Set WiFi to station mode
-  WiFi.mode(WIFI_AP_STA);
-    // Disconnect from an AP if it was previously connected
-  // WiFi.disconnect();
-  // delay(100);
+  WiFi.mode(WIFI_STA);
+
+  // Disconnect from an AP if it was previously connected
+  WiFi.disconnect();
+  delay(100);
 
   // Set up WiFi even handler. NOTE:
   // 1. Must save the handler returned, otherwise it will be auto deleted and won't catch up any events
@@ -202,6 +259,8 @@ void EspClient::_setupWifi()
     Serial.println(WiFi.localIP().toString().c_str());
     _printLine();
 
+    //TODO: check if the IP is valide!!! e.g., not 192.168.x.x
+
     _wifiConnected = true;
 
     // reconnect MQTT
@@ -212,14 +271,15 @@ void EspClient::_setupWifi()
       Serial.println("MQTT: Set reconnect timmer");
     #endif
 
-    // Only set up OTA when got IP!!
-    // _setupOTA();
+    _stopAP();
   });
 
   static WiFiEventHandler DISCONNECT_HANDLER = WiFi.onStationModeDisconnected([&] (const WiFiEventStationModeDisconnected& event) {
     _printLine();
     Serial.println(F("WiFi: Disconnected"));
     _printLine();
+
+    _startAP();
 
     _wifiConnected = false;
   });
@@ -233,36 +293,40 @@ void EspClient::_setupMQTT()
 
   // set the event callback functions
   mqttClient.onConnect([&](bool sessionPresent) {
-    _printLine();
-    Serial.println(F("MQTT: Connected"));
-    _printLine();
+    if(!_mqttConnected) // just got connected
+    {
+      // set delay timmer to subscribe command topic
+      StensTimer *pTimer = StensTimer::getInstance(); 
+      pTimer->setTimer(this, ACT_MQTT_SUBSCRIBE, MQTT_SUBSCRIBE_DELAY);
 
-    // set delay timmer to subscribe command topic
-    StensTimer *pTimer = StensTimer::getInstance(); 
-    pTimer->setTimer(this, ACT_MQTT_SUBSCRIBE, MQTT_SUBSCRIBE_DELAY);
+      // set the flag at the end to make sure there is no other hareware interrup action casusing exception!!
+      _mqttConnected = true;
 
-    // set the flag at the end to make sure there is no other hareware interrup action casusing exception!!
-    _mqttConnected = true;
+      _printLine();
+      Serial.println(F("MQTT: Connected"));
+      _printLine();
+    }
   });
 
   mqttClient.onDisconnect([&](AsyncMqttClientDisconnectReason reason) {
-    _mqttConnected = false;
-
     // reconnect MQTT, check if it is on to avoid recreate timer
-    if(!_mqttReconnectOn)
+    // if(!_mqttReconnectOn)
+
+    if(_mqttConnected) // means just turned to disconnect, set reconnet timer
     {
+      _mqttConnected = false;
+
       StensTimer *pTimer = StensTimer::getInstance(); 
       pTimer->setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
-      _mqttReconnectOn = true;
-    }
-    
-    _printLine();
-    Serial.println(F("MQTT: Disconnected"));
-    _printLine();
 
-#ifdef _DEBUG
-    _printMqttDisconnectReason(reason);
-#endif
+      _printLine();
+      Serial.println(F("MQTT: Disconnected"));
+      _printLine();
+
+      #ifdef _DEBUG
+          _printMqttDisconnectReason(reason);
+      #endif
+    }
   });
 
   mqttClient.onSubscribe([&](uint16_t packetId, uint8_t qos) {
@@ -423,24 +487,6 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   _portalOn = true;         // this will enable the pollPortal call in the loop of main.cpp
   _portalSubmitted = false; // used when portal is in blocking mode. will be set to true when the configuration is done in _handleConfigPortal
 
-  // construct ssid name
-  char ssid[40];    // this will be used as AP WiFi SSID
-  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%zu", cfg.module.c_str(), ESP.getChipId());
-  if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
-
-  // Enable WiFi AP mode  <= This is done in _setupWiFi()
-  // WiFiMode_t mode = WiFi.getMode();
-  // if(mode == WIFI_OFF) WiFi.mode(WIFI_AP);
-  // else if(mode == WIFI_STA) WiFi.mode(WIFI_AP_STA);
-  // WiFi.mode(WIFI_AP_STA);
-
-  _printLine();
-  Serial.printf("AP: "); Serial.println(ssid);
-  _printLine();
-
-  WiFi.softAP(ssid, cfg.apPass); // wpa2 requires an (exact) 8 character password.
-
-  
   // -- setup web handlers ------------------------------
   _webServer.on(PSTR("/api/files/list"), HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("Got list");
@@ -597,9 +643,9 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   _webServer.begin(); // start web server
 
   _printLine();
-  Serial.println(F("Config portal on:"));
-  if(_wifiConnected) Serial.printf("Browse http://%s/ or %s for portal, or\n", cfg.module.c_str(), WiFi.localIP().toString().c_str());
-  Serial.printf("Connect to Wifi \"%s\" and browse http://%s/ or %s.\n", ssid, cfg.module.c_str(), WiFi.softAPIP().toString().c_str());
+  Serial.println(F("Config portal on"));
+  // if(_wifiConnected) Serial.printf("Browse http://%s/ or %s for portal, or\n", cfg.module.c_str(), WiFi.localIP().toString().c_str());
+  // Serial.printf("Connect to Wifi \"%s\" and browse http://%s/ or %s.\n", ssid, cfg.module.c_str(), WiFi.softAPIP().toString().c_str());
   _printLine();
 
   if(blocking)
@@ -612,6 +658,45 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
       delay(1000);
     } 
   }
+}
+
+void EspClient::_startAP()
+{
+  if(WiFi.getMode() == WIFI_AP_STA) return;
+
+  // construct ssid name
+  char ssid[40];    // this will be used as AP WiFi SSID
+  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%zu", cfg.module.c_str(), ESP.getChipId());
+  if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
+
+  // Enable WiFi AP mode  <= This is done in _setupWiFi()
+  // WiFiMode_t mode = WiFi.getMode();
+  // if(mode == WIFI_OFF) WiFi.mode(WIFI_AP);
+  // else if(mode == WIFI_STA) WiFi.mode(WIFI_AP_STA);
+  // WiFi.mode(WIFI_AP_STA);
+
+  _printLine();
+  Serial.printf("AP on: "); Serial.println(ssid);
+  _printLine();
+
+  // NOTE: WiFi.softAP call will change WiFi mode to WIFI_AP_STA
+  // Serial.printf("startAP WiFi mode0: %d\n", WiFi.getMode());
+  WiFi.softAP(ssid, cfg.apPass); // wpa2 requires an (exact) 8 character password.
+  // Serial.printf("startAP WiFi mode1: %d\n", WiFi.getMode());
+}
+
+void EspClient::_stopAP()
+{
+  if(WiFi.getMode() == WIFI_STA) return;
+
+  // NOTE: WiFi.softAPdisconnect call will change WiFi mode back to WIFI_STA
+  // Serial.printf("stopAP WiFi mode0: %d\n", WiFi.getMode());
+  WiFi.softAPdisconnect (true);
+  // Serial.printf("stopAP WiFi mode1: %d\n", WiFi.getMode());
+
+  _printLine();
+  Serial.printf("AP off");
+  _printLine();
 }
 
 void EspClient::timerCallback(Timer* timer)
@@ -641,6 +726,14 @@ void EspClient::timerCallback(Timer* timer)
         if (_autoMode) _measure();
         break;
 
+      case ACT_MEASURE_MANUAL:
+        #ifdef _DEBUG
+          Serial.println(F("TIMER: ACT_MEASURE_MANUAL"));
+        #endif
+
+        _measure();
+        break;
+
       case ACT_WIFI_CONNECT_TIMEOUT:
         #ifdef _DEBUG
           Serial.println(F("TIMER: ACT_WIFI_CONNECT_TIMEOUT"));
@@ -662,22 +755,19 @@ void EspClient::timerCallback(Timer* timer)
         
         if(repetitions > 1)
         {
-          // not reaching max number of reconnect try, continue of not connected
-          if(!_mqttConnected) _connectToMqttBroker();
+          // not reaching max number of reconnect try, continue if wifi is on but mqtt is not
+          if(_wifiConnected && !_mqttConnected) _connectToMqttBroker();
         }
         else
         {
           // reach max try, create a longer timer if not connected which means
           // mqtt will keep trying untill it is connected.
-          if(_mqttConnected)
+          if(!_mqttConnected)
           {
-            _mqttReconnectOn = false; // timer end, no need anymore
-          }
-          else
-          {
-            Serial.println(F("Reset MQTT connect timer to longer interval"));
+            // Reset MQTT connect timer to longer interval if wifi is not connected, otherwise same interval
             StensTimer *pTimer = StensTimer::getInstance(); 
-            pTimer->setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL_LONG, MQTT_MAX_TRY);
+            pTimer->setTimer(this, ACT_MQTT_RECONNECT,
+              _wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG, MQTT_MAX_TRY);
           }
         }
         break;
@@ -721,7 +811,6 @@ void EspClient::_blink()
 
 void EspClient::_measure()
 {
-  //for(int i=0; i<MAX_SENSORS; i++)
   for(Sensor * pSensor : _sensors)
   {
     if(pSensor != NULL && isConnected())
@@ -777,7 +866,7 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   else if(strcmp(topic, CMD_MEASURE) == 0)
   {
     // measure may take longer time, leave the task to timer with one-time timer
-    pTimer->setTimer(this, ACT_MEASURE, 100);
+    pTimer->setTimer(this, ACT_MEASURE_MANUAL, 100);
   }
   else if(strcmp(topic, CMD_INTERVAL) == 0)
   {

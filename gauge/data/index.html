@@ -3,73 +3,115 @@
 <html>
 <head>
     <meta charset="utf-8"/>
-    <title>JSONEditor with forms</title>
+    <title>Device Setup</title>
     <link rel="stylesheet" href="bootstrap.min.css">
 		<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container">
 
-    <div class="form-group"></div>
-		<div id='editor-container'></div>
-		
-		<button id='save' type='button' class="btn btn-primary" width="100">Save</button> <!-- do not use type='submit' as we use ajax -->
-		
-		<button id='restart' type='button' class="btn btn-primary" width="100">Restart</button>
-		<!-- <button id='reset_wifi' type='button' class="btn btn-primary" width="100">Reset Wifi</button> -->
-		<button id='filelist' type='button' class="btn btn-primary" width="100">Filelist</button>
-		
-		<input id='upload' type='file' class="btn btn-primary" width="100"></button>
+<!-- Tab links -->
+<div class="tab">
+  <button id='tab_config' class="tablinks" onclick="openTab(event, 'config')">Config</button>
+  <button id='tab_file_manager' class="tablinks" onclick="openTab(event, 'file_manager')">File Manager</button>
+	<button id='tab_system' class="tablinks" onclick="openTab(event, 'system')">System</button>
+</div>
 
-		<hr>
-    
-		<div id="block_container">
-			<div id='jseditor'>
-				<label for="post"><b>Real-time form json</b></label>
-				<textarea id="post" rows="25" cols="45"></textarea>
-			</div>
+<div id="config" class="tabcontent">
+	<div class="form-group"></div>
+	<div id='editor-container'></div>
+	
+	<button id='save' type='button' class='btn btn-primary' width="100">Save</button> <!-- do not use type='submit' as we use ajax -->
 
-			<div id='jstxt'>
-				<label for="input"><b>Set form with json strings:</b></label>
-				<button id='setvalue'>Set Form</button>
-				<textarea id="input" rows="25" cols="45"></textarea>
-			</div>
-			
-			<div id='jsresp'>
-				<label for="output"><b>Web response:</b></label>
-				<div id='status' style="color:red"></div>
-				<textarea id="output" rows="25" cols="45"></textarea>
-			</div>
+	<hr>
+	
+	<div class="block_container">
+		<div id='jseditor'>
+			<label for="post"><b>Real-time form json:</b></label>
+			<textarea id="post" rows="25" cols="60"></textarea>
 		</div>
 
-		<hr>
-		
-		<div id="tbl_filelist"></div>
-		
-		<hr>
-		
-		<p>
-        The form is set to send a <code>GET</code> request to the same page.
-        A change event listener has been added to the editor so that whenever the form changes, the editor value
-        is stored in a hidden input using <code>JSON.stringify()</code>.
-    </p>
+		<div id='jstxt'>
+			<label for="input"><b>Set form with json strings >> </b>  <button id='setvalue'>Set Form</button></label>
+			<textarea id="input" rows="24" cols="60"></textarea>
+		</div>
+	</div>
 
-    <p>
-        The option <code>use_name_attributes</code> was set to <code>false</code>
-        to avoid sending the other field with the request.
-    </p>
-    <p>
-        When the form is submitted only the hidden input is sent in the request.
-        This allows to send data structures like arrays and object.
-        Also the same schema that is used to build the form can be used as parameter to backend json validators tools.
-        Try yourself, submit the form and look in the network tab of the developer tool.
-    </p>
-		
-		<hr>
-
-    <h2>Get params</h2>
-    <pre id="get-params"></pre>
 </div>
+
+<div id="file_manager" class="tabcontent">
+  <h3>File Manager</h3>
+	<button id='filelist' type='button' class='btn btn-primary' width="100">Filelist</button>
+	
+	<label for="upload">      Upload >> </label>
+	<input id='upload' type='file' class='btn btn-primary' width="100">
+
+	<hr>
+	
+	<div id="tbl_filelist"></div>
+</div>
+
+<div id="system" class="tabcontent">
+	<h3>System Manager</h3>
+	<button id='restart' type='button' class='btn btn-primary' width="100">Restart</button>
+	<!-- <button id='reset_wifi' type='button' class='btn btn-primary' width="100">Reset Wifi</button> -->
+</div>
+
+
+<div class="block_container">
+	<div id='jsresp'>
+		<label for="output"><b>Web response:</b></label>
+		<div id='status' style="color:red"></div>
+		<textarea id="output" rows="10" cols="90"></textarea>
+	</div>
+</div>
+
+
+<p>
+		The form is set to send a <code>GET</code> request to the same page.
+		A change event listener has been added to the editor so that whenever the form changes, the editor value
+		is stored in a hidden input using <code>JSON.stringify()</code>.
+</p>
+
+<p>
+		The option <code>use_name_attributes</code> was set to <code>false</code>
+		to avoid sending the other field with the request.
+</p>
+<p>
+		When the form is submitted only the hidden input is sent in the request.
+		This allows to send data structures like arrays and object.
+		Also the same schema that is used to build the form can be used as parameter to backend json validators tools.
+		Try yourself, submit the form and look in the network tab of the developer tool.
+</p>
+
+<hr>
+
+<h2>Get params</h2>
+<pre id="get-params"></pre>
+
+<script>
+function openTab(evt, tabName) {
+  // Declare all variables
+  var i, tabcontent, tablinks;
+
+  // Get all elements with class="tabcontent" and hide them
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+
+  // Get all elements with class="tablinks" and remove the class "active"
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+
+  // Show the current tab, and add an "active" class to the button that opened the tab
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+
+document.getElementById('tab_file_manager').click()
+</script>
 
 <script>
 
@@ -132,16 +174,18 @@ filelist.onclick = function(event){
 			document.getElementById('status').innerHTML = 'Filelist received'
 			document.getElementById('output').value = xhr.responseText
 			
-			var js = JSON.parse(xhr.responseText);
-			
-			document.getElementById('tbl_filelist').value = '';
-			addTable(js.files);
+			try {
+        var js = JSON.parse(xhr.responseText);
+				document.getElementById('tbl_filelist').value = '';
+				addTable(js.files);
+			} catch (e) {
+        alert(xhr.responseText);
+			}
 		}
 	}
 	
 	xhr.send()
-}
-		
+}	
 
 var removeFile = function(filename){
 	var formData = new FormData()
@@ -154,14 +198,14 @@ var removeFile = function(filename){
 		if (xhr.readyState == XMLHttpRequest.DONE) {
 			document.getElementById('status').innerHTML = 'RmvFile received'
 			document.getElementById('output').value = xhr.responseText
-		}else {
-			alert('Failed submission!');
+			
+			filelist.click(); // refresh file list
+			alert('Done remove file!');
 		}
 	}
 	
 	xhr.send(formData)
 }
-
 	
 // https://researchhubs.com/post/computing/javascript/upload-files-with-ajax.html		
 var upload = document.getElementById('upload')
@@ -193,6 +237,7 @@ upload.onchange = function () {
 	xhr.onload = function () {
 		if (xhr.status === 200) {
 			// File(s) uploaded.
+			filelist.click(); // refresh file list
 			alert('Uploaded!');
 		} else {
 			alert('An error occurred!');
@@ -336,6 +381,7 @@ reset_wifi.onclick = function(event){
     disable_edit_json: true,
     disable_properties: true,
     disable_collapse: true,
+		compact: true,
     schema: {
       'title': 'ESP Device Setup',
       'type': 'object',
@@ -427,7 +473,7 @@ reset_wifi.onclick = function(event){
         },
         'sensors': {
           'type': 'array',
-          'format': 'table',
+          'format': 'tabs',
           'title': 'Sensors',
           'uniqueItems': true,
           'items': {
@@ -474,7 +520,7 @@ reset_wifi.onclick = function(event){
       }
     }
   }
-
+	
   var editor = new JSONEditor(document.querySelector('#editor-container'), schema)
 
 	document.getElementById('setvalue').onclick = function(event){

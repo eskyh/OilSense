@@ -16,10 +16,9 @@ char* DH11::getPayload()
 	// 	_measures[0],
 	// 	_measures[1],
 	// 	_measures[4]);
-	snprintf(payload, sizeof(payload), "{\"humidity\":%.1f,\"temperature\":%.1f,\"heatindex\":%.1f}",
+	snprintf(payload, sizeof(payload), "{\"humidity\":%.1f,\"temperature\":%.1f}",
 		_measures[0],
-		_measures[1],
-		_measures[4]);	
+		_measures[1]);	
   return payload;
 }
 

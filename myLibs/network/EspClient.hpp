@@ -66,7 +66,7 @@
 
 
 #define MQTT_MAX_TRY             15     // Max number of MQTT connect tries before ask for turn on portal
-#define MQTT_RECONNECT_INTERVAL  2e3    // Time interval between each MQTT reconnection attempt, 2s by default
+#define MQTT_RECONNECT_INTERVAL  5e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_RECONNECT_INTERVAL_LONG  10e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_SUBSCRIBE_DELAY     1e3    // MQTT subscribe attempt delay after connected
 #define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout, 20s bu default
@@ -135,11 +135,12 @@ class EspClient : public IStensTimerListener
 
     // WiFi related
     bool _wifiConnected = false;
-    bool _wifiReconnected = false;
     void _setupWifi();
 
+    void _startAP();
+    void _stopAP();
+
     // MQTT related
-    bool _mqttReconnectOn = false;
     bool _mqttConnected = false;
     void _setupMQTT();
 
@@ -147,7 +148,7 @@ class EspClient : public IStensTimerListener
     
     void _setupOTA();
 
-    void _connectToWifi(bool blocking=true);
+    void _connectToWifi();
     void _connectToMqttBroker();
   #ifdef _DEBUG
     void _printMqttDisconnectReason(AsyncMqttClientDisconnectReason reason);
@@ -157,12 +158,13 @@ class EspClient : public IStensTimerListener
 
     // Timer action IDs
     enum {
-      ACT_HEARTBEAT,  // heartbeat
-      ACT_MEASURE,     // sensor measure timer
-      ACT_WIFI_CONNECT_TIMEOUT,  // wait for WIFI connect time out
+      ACT_HEARTBEAT,            // heartbeat
+      ACT_MEASURE,              // sensor measure timer
+      ACT_MEASURE_MANUAL,       // one off manual measure timer
+      ACT_WIFI_CONNECT_TIMEOUT, // wait for WIFI connect time out
       ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
       ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
-      ACT_CLOSE_PORTAL,          // Config portal open time out (i.e., 120s after open)
+      ACT_CLOSE_PORTAL,         // Config portal open time out (i.e., 120s after open)
       // ACT_RESET_WIFI
       ACT_CMD_RESTART
     };
