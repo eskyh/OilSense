@@ -564,39 +564,47 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
   // Route for root / web page
   _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/index.html", String(), false, [](const String& var){
-    #ifdef _DEBUG
-      Serial.println(var);
-    #endif
-
-      String buffer;
-      if(var == "CONFIG") serializeJsonPretty(cfg.doc, buffer);
-      return buffer;
-    });
-  });
-
-  // Route to load style.css file
-  _webServer.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/style.css", "text/css");
-  });
-
-  // it seems /bootstrap.min.css.gz does not work while jsoneditor.min.js.gz does work. Wired!
-  _webServer.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/bootstrap.min.css", "text/css");
-    // Serial.println("Send /bootstrap.min.css");
-    // AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/bootstrap.min.css.gz", "text/html", false);
-    // response->addHeader("Content-Encoding", "gzip");
-    // request->send(response);
-  });
-
-  // also it seems .gz works on other browsers but Safari which need chagne .gz to .jgz to work!
-  _webServer.on("/jsoneditor.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    //request->send(LittleFS, "/jsoneditor.min.js", "text/javascript");
-    Serial.println("Send /jsoneditor.min.css");
-    AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/jsoneditor.min.js.jgz", "text/html", false);
+    AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html.gz", "text/html", false);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response);    
   });
+
+  // Route for root / web page
+  // _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   request->send(LittleFS, "/index.html", String(), false, [](const String& var){
+  //   #ifdef _DEBUG
+  //     Serial.println(var);
+  //   #endif
+
+  //     // replace the keywords
+  //     String buffer;
+  //     if(var == "CONFIG") serializeJsonPretty(cfg.doc, buffer);
+  //     return buffer;
+  //   });
+  // });
+
+  // Route to load style.css file
+  // _webServer.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   request->send(LittleFS, "/style.css", "text/css");
+  // });
+
+  // it seems /bootstrap.min.css.gz does not work while jsoneditor.min.js.gz does work. Wired!
+  // _webServer.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   request->send(LittleFS, "/bootstrap.min.css", "text/css");
+  //   // Serial.println("Send /bootstrap.min.css");
+  //   // AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/bootstrap.min.css.gz", "text/html", false);
+  //   // response->addHeader("Content-Encoding", "gzip");
+  //   // request->send(response);
+  // });
+
+  // also it seems .gz works on other browsers but Safari which need chagne .gz to .jgz to work!
+  // _webServer.on("/jsoneditor.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   //request->send(LittleFS, "/jsoneditor.min.js", "text/javascript");
+  //   Serial.println("Send /jsoneditor.min.css");
+  //   AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/jsoneditor.min.js.jgz", "text/html", false);
+  //   response->addHeader("Content-Encoding", "gzip");
+  //   request->send(response);    
+  // });
 
   _webServer.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Restarted");

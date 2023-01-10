@@ -4,8 +4,9 @@
 <head>
     <meta charset="utf-8"/>
     <title>Device Setup</title>
-    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap.css">
 		<link rel="stylesheet" href="style.css">
+		<script src="jsoneditor.js"></script>
 </head>
 <body>
 
@@ -366,8 +367,6 @@ reset_wifi.onclick = function(event){
 */
 
 </script>
-
-<script src="jsoneditor.min.js"></script>
 <script>
   var params = {}
   for (const [key, value] of new URLSearchParams(window.location.search).entries()) {
