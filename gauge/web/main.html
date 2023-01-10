@@ -21,7 +21,8 @@
 	<div class="form-group"></div>
 	<div id='editor-container'></div>
 	
-	<button id='save' type='button' class='btn btn-primary' width="100">Save</button> <!-- do not use type='submit' as we use ajax -->
+	<button id='get_config' type='button' class='btn btn-primary' width="100">Get Config</button> <!-- do not use type='submit' as we use ajax -->
+	<button id='set_config' type='button' class='btn btn-primary' width="100">Set Config</button>
 
 	<hr>
 	
@@ -41,7 +42,7 @@
 
 <div id="file_manager" class="tabcontent">
   <h3>File Manager</h3>
-	<button id='filelist' type='button' class='btn btn-primary' width="100">Filelist</button>
+	<!-- <button id='filelist' type='button' class='btn btn-primary' width="100">Filelist</button> -->
 	
 	<label for="upload">      Upload >> </label>
 	<input id='upload' type='file' class='btn btn-primary' width="100">
@@ -116,17 +117,42 @@ document.getElementById('tab_file_manager').click()
 
 <script>
 
-var config = `%CONFIG%`;
+//var config = `%CONFIG%`;
+var config = '';
+
+var get_config = document.getElementById('get_config')
+get_config.onclick = function(event){ getConfig() }
+
+function getConfig(){
+	var xhr = new XMLHttpRequest()
+	//open the request
+	xhr.open('get', '/api/config/get', true)
+	xhr.setRequestHeader("Content-Type", "text/plain")
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState == XMLHttpRequest.DONE) {
+			document.getElementById('status').innerHTML = 'Config received'
+			document.getElementById('output').value = xhr.responseText
+			
+			try {
+        editor.setValue(JSON.parse(xhr.responseText));
+			} catch (e) {
+        alert(xhr.responseText);
+			}
+		}
+	}
+	
+	xhr.send()
+}
 
 //var form = document.getElementById('config')
 
-var save = document.getElementById('save')
-save.onclick = function(event){
+var set_config = document.getElementById('set_config')
+set_config.onclick = function(event){
 	var xhr = new XMLHttpRequest()
 	//var formData = new FormData(form)
 	//open the request
 	//xhr.open(form.method, form.action, true)
-	xhr.open('post', '/api/config', true)
+	xhr.open('post', '/api/config/set', true)
 	xhr.setRequestHeader("Content-Type", "application/json")
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == XMLHttpRequest.DONE) {
@@ -143,7 +169,7 @@ save.onclick = function(event){
 	//Fail the onsubmit to avoid page refresh.
 	// return false; 
 }
-		
+	
 var restart = document.getElementById('restart')
 restart.onclick = function(event){
 	var xhr = new XMLHttpRequest()
@@ -164,8 +190,11 @@ restart.onclick = function(event){
 	// return false; 
 }
 
-var filelist = document.getElementById('filelist')
-filelist.onclick = function(event){
+//var filelist = document.getElementById('filelist')
+//filelist.onclick = getFileList
+document.body.onload = getFileList
+
+function getFileList(){
 	var xhr = new XMLHttpRequest()
 	//open the request
 	xhr.open('get', '/api/files/list', true)
@@ -200,7 +229,8 @@ var removeFile = function(filename){
 			document.getElementById('status').innerHTML = 'RmvFile received'
 			document.getElementById('output').value = xhr.responseText
 			
-			filelist.click(); // refresh file list
+			//filelist.click(); // refresh file list
+			getFileList();
 			alert('Done remove file!');
 		}
 	}
@@ -238,7 +268,8 @@ upload.onchange = function () {
 	xhr.onload = function () {
 		if (xhr.status === 200) {
 			// File(s) uploaded.
-			filelist.click(); // refresh file list
+			//filelist.click(); // refresh file list
+			getFileList();
 			alert('Uploaded!');
 		} else {
 			alert('An error occurred!');
@@ -530,7 +561,9 @@ reset_wifi.onclick = function(event){
 	editor.on('ready', function () {
     // editor.setValue(config); // set the config
 		// document.querySelector('#input').value = config
-		editor.setValue(JSON.parse(config))
+		
+		//editor.setValue(getConfig())
+		getConfig()
   })
   
 	editor.on('change', function () {

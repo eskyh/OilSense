@@ -564,6 +564,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
   // Route for root / web page
   _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial.println("Homepage request");
     AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html.gz", "text/html", false);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response);    
@@ -622,8 +623,14 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   //   request->send(200, "text/plain", "reset wifi");
   // });
 
+  // send config.json per client request
+  _webServer.on("/api/config/get", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial.println("Get config.");
+    request->send(LittleFS, "/config.json", "text/plain");
+  });
+
   // NOTE: this on is using Json handler!! => AsyncCallbackJsonWebHandler
-  _webServer.addHandler(new AsyncCallbackJsonWebHandler("/api/config", [&](AsyncWebServerRequest *request, JsonVariant &json) {
+  _webServer.addHandler(new AsyncCallbackJsonWebHandler("/api/config/set", [&](AsyncWebServerRequest *request, JsonVariant &json) {
     String buffer;
     serializeJsonPretty(json, buffer);
     Serial.println(buffer);
