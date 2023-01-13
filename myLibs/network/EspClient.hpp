@@ -160,13 +160,14 @@ class EspClient : public IStensTimerListener
     enum {
       ACT_HEARTBEAT,            // heartbeat
       ACT_MEASURE,              // sensor measure timer
-      ACT_MEASURE_MANUAL,       // one off manual measure timer
-      ACT_WIFI_CONNECT_TIMEOUT, // wait for WIFI connect time out
+      
       ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
+      
+      // One off timers
       ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
-      ACT_CLOSE_PORTAL,         // Config portal open time out (i.e., 120s after open)
-      // ACT_RESET_WIFI
-      ACT_CMD_RESTART
+      // ACT_CMD_RESET_WIFI,
+      ACT_CMD_RESTART,          // One off restart
+      ACT_CMD_MEASURE           // One off manual measure timer
     };
 
     // Sensors

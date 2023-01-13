@@ -260,18 +260,20 @@ void EspClient::_setupWifi()
     _printLine();
 
     //TODO: check if the IP is valide!!! e.g., not 192.168.x.x
+    if(!_wifiConnected) // just got disconnected
+    {
+      _wifiConnected = true;
 
-    _wifiConnected = true;
+      // reconnect MQTT
+      StensTimer *pTimer = StensTimer::getInstance(); 
+      pTimer->setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
 
-    // reconnect MQTT
-    StensTimer *pTimer = StensTimer::getInstance(); 
-    pTimer->setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
+      #ifdef _DEBUG
+        Serial.println("MQTT: Set reconnect timmer");
+      #endif
 
-    #ifdef _DEBUG
-      Serial.println("MQTT: Set reconnect timmer");
-    #endif
-
-    _stopAP();
+      _stopAP();
+    }
   });
 
   static WiFiEventHandler DISCONNECT_HANDLER = WiFi.onStationModeDisconnected([&] (const WiFiEventStationModeDisconnected& event) {
@@ -279,9 +281,11 @@ void EspClient::_setupWifi()
     Serial.println(F("WiFi: Disconnected"));
     _printLine();
 
-    _startAP();
-
-    _wifiConnected = false;
+    if(_wifiConnected) // just got disconnected
+    {
+      _startAP();
+      _wifiConnected = false;
+    }
   });
 }
 
@@ -488,6 +492,16 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   _portalSubmitted = false; // used when portal is in blocking mode. will be set to true when the configuration is done in _handleConfigPortal
 
   // -- setup web handlers ------------------------------
+  // Route for root / web page
+  // change the index.html.gz (gzipped) file name to index.html and uploadd to esp. This will work
+  // on both chrome and Safari (.gz file name won't work on Safari!).
+  _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial.println("Homepage request");
+    AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html", "text/html", false);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);    
+  });
+
   _webServer.on(PSTR("/api/files/list"), HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("Got list");
 
@@ -562,66 +576,12 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     }
   });
 
-  // Route for root / web page
-  _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("Homepage request");
-    AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html.gz", "text/html", false);
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response);    
-  });
-
-  // Route for root / web page
-  // _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  //   request->send(LittleFS, "/index.html", String(), false, [](const String& var){
-  //   #ifdef _DEBUG
-  //     Serial.println(var);
-  //   #endif
-
-  //     // replace the keywords
-  //     String buffer;
-  //     if(var == "CONFIG") serializeJsonPretty(cfg.doc, buffer);
-  //     return buffer;
-  //   });
-  // });
-
-  // Route to load style.css file
-  // _webServer.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-  //   request->send(LittleFS, "/style.css", "text/css");
-  // });
-
-  // it seems /bootstrap.min.css.gz does not work while jsoneditor.min.js.gz does work. Wired!
-  // _webServer.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request){
-  //   request->send(LittleFS, "/bootstrap.min.css", "text/css");
-  //   // Serial.println("Send /bootstrap.min.css");
-  //   // AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/bootstrap.min.css.gz", "text/html", false);
-  //   // response->addHeader("Content-Encoding", "gzip");
-  //   // request->send(response);
-  // });
-
-  // also it seems .gz works on other browsers but Safari which need chagne .gz to .jgz to work!
-  // _webServer.on("/jsoneditor.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
-  //   //request->send(LittleFS, "/jsoneditor.min.js", "text/javascript");
-  //   Serial.println("Send /jsoneditor.min.css");
-  //   AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/jsoneditor.min.js.jgz", "text/html", false);
-  //   response->addHeader("Content-Encoding", "gzip");
-  //   request->send(response);    
-  // });
-
   _webServer.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Restarted");
 
     StensTimer *pTimer = StensTimer::getInstance(); 
     pTimer->setTimer(this, ACT_CMD_RESTART, 100);
   });
-
-  // _webServer.on("/reset_wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
-  //   Serial.println("reset wifi.");
-    
-  //   StensTimer *pTimer = StensTimer::getInstance(); 
-  //   pTimer->setTimer(this, ACT_RESET_WIFI, 100);
-
-  //   request->send(200, "text/plain", "reset wifi");
-  // });
 
   // send config.json per client request
   _webServer.on("/api/config/get", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -729,10 +689,6 @@ void EspClient::timerCallback(Timer* timer)
         break;
       }
 
-      case ACT_CMD_RESTART:
-        _restart();
-        break;
-        
       case ACT_MEASURE:
         #ifdef _DEBUG
           Serial.println(F("TIMER: ACT_MEASURE"));
@@ -741,9 +697,13 @@ void EspClient::timerCallback(Timer* timer)
         if (_autoMode) _measure();
         break;
 
-      case ACT_MEASURE_MANUAL:
+      case ACT_CMD_RESTART:
+        _restart();
+        break;
+
+      case ACT_CMD_MEASURE:
         #ifdef _DEBUG
-          Serial.println(F("TIMER: ACT_MEASURE_MANUAL"));
+          Serial.println(F("TIMER: ACT_CMD_MEASURE"));
         #endif
 
         _measure();
@@ -780,9 +740,13 @@ void EspClient::timerCallback(Timer* timer)
           if(!_mqttConnected)
           {
             // Reset MQTT connect timer to longer interval if wifi is not connected, otherwise same interval
-            StensTimer *pTimer = StensTimer::getInstance(); 
-            pTimer->setTimer(this, ACT_MQTT_RECONNECT,
-              _wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG, MQTT_MAX_TRY);
+            // StensTimer *pTimer = StensTimer::getInstance(); 
+            // pTimer->setTimer(this, ACT_MQTT_RECONNECT,
+            //   _wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG, MQTT_MAX_TRY);
+
+            // avoid recreate new timer object!
+            timer->setDelay(_wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG);
+            timer->setRepetitions(MQTT_MAX_TRY)
           }
         }
         break;
@@ -881,7 +845,7 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   else if(strcmp(topic, CMD_MEASURE) == 0)
   {
     // measure may take longer time, leave the task to timer with one-time timer
-    pTimer->setTimer(this, ACT_MEASURE_MANUAL, 100);
+    pTimer->setTimer(this, ACT_CMD_MEASURE, 100);
   }
   else if(strcmp(topic, CMD_INTERVAL) == 0)
   {
