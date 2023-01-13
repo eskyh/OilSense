@@ -15,164 +15,133 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <StensTimer.h>
+#include <JTimer.h>
 
-StensTimer* StensTimer::_instance = NULL;
-
-/* Return existing instance, if none exists, create one */
-StensTimer* StensTimer::getInstance(){
-    if (_instance == NULL){ // prevents double initialization
-        _instance = new StensTimer();
-    }
+JTimer& JTimer::instance(){
+    static JTimer _instance;
     return _instance;
 }
 
-StensTimer::StensTimer(){}
-
 /* Delete timers before object will be destroyed */
-StensTimer::~StensTimer(){
-  deleteTimers();
-  _instance = NULL;
-}
+JTimer::~JTimer(){}
 
-void StensTimer::setStaticCallback(void (*staticTimerCallback)(Timer*)){
+void JTimer::setStaticCallback(void (*staticTimerCallback)(Timer*)){
   _staticTimerCallback = staticTimerCallback;
 }
 
-void StensTimer::deleteStaticCallback(){
+void JTimer::deleteStaticCallback(){
   _staticTimerCallback = NULL;
 }
 
-/* Creates new timer and returns its pointer */
-Timer* StensTimer::createTimer(IStensTimerListener* listener, int action, long interval, int repetitions){
-  int freeSlot = findFreeSlot();
-
-  /* No space for more timers */
-  if(freeSlot < 0){
-    Serial.println(F("Error: Timer slots full!"));
-    return NULL;
+// return enabled timer with matching action
+Timer* JTimer::getTimer(int action)
+{
+  for(int i=0; i<MAX_TIMERS; i++)
+  {
+    if_timers[i].enabled && _timers[i].action == action) return &(_timers[i]);
   }
 
-  /* Increment _lastId by one, making always unique */
-  _lastId++;
-  _timers[freeSlot] = new Timer(listener, _lastId, action, interval, repetitions);
-  return _timers[freeSlot];
+  return NULL;
+}
+
+/* Creates new timer and returns its pointer */
+Timer* JTimer::_resetTimer(IJTimerListener* listener, int action, long interval, int repetitions)
+{
+  int idx0 = -1;
+  for(int i=0; i<MAX_TIMERS; i++)
+  {
+    if_timers[i].enabled)
+    {
+      if(_timers[i].action == action)_resetTimer(
+      {
+        _timers[i].init(listener, action, interval, repetitions);
+        return &(_timers[i]);
+      }
+    }else
+    {
+      if(idx0 == -1) idx0 = i; // record the first disabled timer index
+    }
+  }
+
+  if(idx0 != -1)
+  {
+    _timers[i].init(listener, action, interval, repetitions);
+    return &(_timers[i]);
+
+  }else
+  {
+    #ifdef _DEBUG
+      Serial.println(F("Error: Timer slots full!"));
+    #endif
+
+    return NULL;
+  }
 }
 
 /* Creates and returns timer that runs once */
-Timer* StensTimer::setTimer(IStensTimerListener* listener, int action, long delay, long repetitions){
-  return createTimer(listener, action, delay, repetitions);
+Timer* JTimer::setTimer(IJTimerListener* listener, int action, long delay, long repetitions){
+  return _resetTimer(listener, action, delay, repetitions);
 }
 
 /* Sets timer without listener object */
-Timer* StensTimer::setTimer(int action, long delay, long repetitions){
+Timer* JTimer::setTimer(int action, long delay, long repetitions){
   /* Static callback must be set */
   if(_staticTimerCallback == NULL){
     return NULL;
   }
 
-  return createTimer(NULL, action, delay, repetitions);
+  return _resetTimer(NULL, action, delay, repetitions);
 }
 
 /* Creates and returns timer that runs forever */
-Timer* StensTimer::setInterval(IStensTimerListener* listener, int action, long interval){
-  return createTimer(listener, action, interval, 0);
+Timer* JTimer::setInterval(IJTimerListener* listener, int action, long interval){
+  return _resetTimer(listener, action, interval, 0);
 }
 
 /* Sets interval without listener object */
-Timer* StensTimer::setInterval(int action, long interval){
+Timer* JTimer::setInterval(int action, long interval){
   /* static callback must be set */
   if(_staticTimerCallback == NULL){
     return NULL;
   }
 
-  return createTimer(NULL, action, interval, 0);
-}
-
-/* Returns first index of empty timer slot, if full, return -1 */
-int StensTimer::findFreeSlot(){
-  for(int index = 0; index < MAX_TIMERS; index++){
-    if(_timers[index] == NULL){
-      return index;
-    }
-  }
-  return -1;
-}
-
-/* Delete given timer by searching in timers and then deleting it */
-void StensTimer::deleteTimer(Timer* timer){
-  if(timer == NULL){
-    return;
-  }
-
-  /* Check if timer exists in timers array. If so, delete it */
-  for(int i = 0; i < MAX_TIMERS; i++){
-    if(_timers[i]->equals(timer)){
-      delete _timers[i];
-      _timers[i] = NULL;
-      return;
-    }
-  }
-}
-
-/* Delete all timers by looping through array and call delete */
-void StensTimer::deleteTimers(){
-  for(int i = 0; i < MAX_TIMERS; i++){
-    if(_timers[i] != NULL){
-      delete _timers[i];
-      _timers[i] = NULL;
-    }
-  }
+  return _resetTimer(NULL, action, interval, 0);
 }
 
 /* Checks for every slot of the timer array if there is any timer.
 If so, it will be processed further. */
-void StensTimer::run(){
+void JTimer::run(){
 
   long now = millis();
 
   /* Execute callback for every timer slot that is not null */
-  for(int i = 0; i < MAX_TIMERS; i++){
-
-    /* Skip iteration if no timer exists in this slot */
-    if(_timers[i] == NULL){
-      continue;
-    }
+  for(int i = 0; i < MAX_TIMERS; i++)
+  {
+    if(!_timers[i].enabled) continue;
 
     /* For readability create temporary variable */
-    Timer* timer = _timers[i];
+    Timer &timer = _timers[i];
 
     /* Skip timer instance if time is not yet due */
-    if(now < timer->getLastCall() + timer->getDelay()){
-      continue;
-    }
+    if(now < timer.lastCall + timer.delay) continue;
 
     /* Update last call time */
-    timer->setLastCall(now);
+    timer.lastCall = now;
 
     /* Pass timer to callback function implemented by user, can be a static function */
     if(_staticTimerCallback == NULL){
-      timer->getListener()->timerCallback(timer);
+      timer.getListener()->timerCallback(timer);
     }else{
       _staticTimerCallback(timer);
     }
 
     /* if user deleted timer while being called, skip over last lines */
-    if(_timers[i] == NULL){
-      continue;
-    }
+    if(!timer.enabled) continue;
 
-    int repetitions = timer->getRepetitions();
+    int repetitions = timer.repetitions;
 
     /* Check if timer is done repeating, if so, delete it */
-    if(repetitions > 1){
-      timer->setRepetitions(repetitions - 1);
-    }
-    else if(repetitions == 1){
-      delete _timers[i]; // Destroy object
-      _timers[i] = NULL; // Delete pointer
-    }
-
+    if(repetitions > 1) timer.repetitions--;
+    else if(repetitions == 1) timer.enabled = false;
   }
-
 }

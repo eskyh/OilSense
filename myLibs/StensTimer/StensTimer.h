@@ -15,12 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef StensTimer_h
-#define StensTimer_h
+#pragma once
 
 #include <Arduino.h>
-#include <timer/Timer.h>
-#include <IStensTimerListener.h>
+#include <Timer.h>
+#include <IJTimerListener.h>
 
 #ifdef Arduino_h
 // arduino is not compatible with std::vector
@@ -28,36 +27,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #undef max
 #endif
 
-class StensTimer {
+#define MAX_TIMERS 20
 
-  #define MAX_TIMERS 20
+class JTimer
+{
+  public:
+    static JTimer& instance();
+    ~JTimer();
 
-    public:
-      static StensTimer* getInstance();
-      ~StensTimer();
+    void run();
 
-      void run();
+    Timer* setTimer(IJTimerListener* listener, int action, long delay, long repetitions = 1);
+    Timer* setTimer(int action, long delay, long repetitions = 1);
 
-      Timer* setTimer(IStensTimerListener* listener, int action, long delay, long repetitions = 1);
-      Timer* setTimer(int action, long delay, long repetitions = 1);
-      Timer* setInterval(IStensTimerListener* listener, int action, long interval);
-      Timer* setInterval(int action, long interval);
-      void setStaticCallback(void (*staticTimerCallback)(Timer*));
-      void deleteStaticCallback();
-      void deleteTimer(Timer* timer);
-      void deleteTimers();
+    Timer* setInterval(IJTimerListener* listener, int action, long interval);
+    Timer* setInterval(int action, long interval);
 
-    private:
-      static StensTimer* _instance;
-      StensTimer();
+    Timer* getTimer(int action);
 
-      long _lastId = 0;
-      Timer* _timers[MAX_TIMERS] = {NULL};
-      void (*_staticTimerCallback)(Timer*) = NULL;
+    void setStaticCallback(void (*staticTimerCallback)(Timer*));
+    void deleteStaticCallback();
 
-      /* Helper functions */
-      int findFreeSlot();
-      Timer* createTimer(IStensTimerListener* listener, int action, long interval, int repetitions);
-  };
+  private:
+    JTimer() {};
+    JTimer(const JTimer&) = delete; // deleting copy constructor.
+    JTimer& operator=(const JTimer&) = delete; // deleting copy operator.
 
-#endif
+    Timer _timers[MAX_TIMERS];
+    void (*_staticTimerCallback)(Timer*) = NULL;
+
+    /* Helper functions */
+    Timer* _resetTimer(IJTimerListener* listener, int action, long interval, int repetitions);
+};
