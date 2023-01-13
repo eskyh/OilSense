@@ -14,8 +14,8 @@
 #include "dht11.hpp"
 #include "vl53l0x.hpp"
 
-Config &cfg = Config::instance();
-StensTimer *pTimer = StensTimer::getInstance();
+Config& cfg = Config::instance();
+JTimer& jTimer = JTimer::instance();
 
 EspClient& EspClient::instance()
 {
@@ -48,8 +48,8 @@ void EspClient::setup()
   _initSensors();
 
   //-- Create timers
-  pTimer->setInterval(this, ACT_HEARTBEAT, 1e3);  // heartbeat every 1 second
-  _timer_sensor = pTimer->setInterval(this, ACT_MEASURE, 10e3);   // every 10 seconds. Save the returned timer for reset the time interval
+  jTimer.setInterval(this, ACT_HEARTBEAT, 1e3);  // heartbeat every 1 second
+  jTimer.setInterval(this, ACT_MEASURE, 10e3);   // every 10 seconds. Save the returned timer for reset the time interval
 }
 
 void EspClient::_initSensors()
@@ -100,8 +100,8 @@ void EspClient::_initSensors()
 
 void EspClient::loop()
 {
-  // let StensTimer do it's magic every time loop() is executed
-  pTimer->run();
+  // let JTimer do it's magic every time loop() is executed
+  jTimer.run();
 
   // if(_wifiConnected) 
   ArduinoOTA.handle(); // OTA does not need wifi connected (AP also fine)
@@ -203,11 +203,6 @@ void EspClient::_connectToWifi()
       #endif
 
       WiFi.begin(cfg.ssid.c_str(), cfg.pass.c_str());
-
-      // set timmer for Wifi connect timeout in 120s (will open portal in blocking mode!!)
-      StensTimer *pTimer = StensTimer::getInstance(); 
-      pTimer->setTimer(this, ACT_WIFI_CONNECT_TIMEOUT, WIFI_CONNECTING_TIMEOUT);
-
       while (WiFi.status() != WL_CONNECTED)
       {
         loop();
@@ -265,8 +260,7 @@ void EspClient::_setupWifi()
       _wifiConnected = true;
 
       // reconnect MQTT
-      StensTimer *pTimer = StensTimer::getInstance(); 
-      pTimer->setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
+      jTimer.setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
 
       #ifdef _DEBUG
         Serial.println("MQTT: Set reconnect timmer");
@@ -300,11 +294,13 @@ void EspClient::_setupMQTT()
     if(!_mqttConnected) // just got connected
     {
       // set delay timmer to subscribe command topic
-      StensTimer *pTimer = StensTimer::getInstance(); 
-      pTimer->setTimer(this, ACT_MQTT_SUBSCRIBE, MQTT_SUBSCRIBE_DELAY);
+      jTimer.setTimer(this, ACT_MQTT_SUBSCRIBE, MQTT_SUBSCRIBE_DELAY);
 
       // set the flag at the end to make sure there is no other hareware interrup action casusing exception!!
       _mqttConnected = true;
+
+      // disable the reconnect timer
+      jTimer.getTimer(ACT_MQTT_RECONNECT)->enabled = false;
 
       _printLine();
       Serial.println(F("MQTT: Connected"));
@@ -320,15 +316,14 @@ void EspClient::_setupMQTT()
     {
       _mqttConnected = false;
 
-      StensTimer *pTimer = StensTimer::getInstance(); 
-      pTimer->setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
+      jTimer.setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
 
       _printLine();
       Serial.println(F("MQTT: Disconnected"));
       _printLine();
 
       #ifdef _DEBUG
-          _printMqttDisconnectReason(reason);
+        _printMqttDisconnectReason(reason);
       #endif
     }
   });
@@ -579,8 +574,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   _webServer.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Restarted");
 
-    StensTimer *pTimer = StensTimer::getInstance(); 
-    pTimer->setTimer(this, ACT_CMD_RESTART, 100);
+    jTimer.setTimer(this, ACT_CMD_RESTART, 100);
   });
 
   // send config.json per client request
@@ -674,12 +668,9 @@ void EspClient::_stopAP()
   _printLine();
 }
 
-void EspClient::timerCallback(Timer* timer)
+void EspClient::timerCallback(Timer& timer)
 {
-    /* check if the timer is one we expect */
-    int action = timer->getAction();
-
-    switch(action)
+    switch(timer.action)
     {
       case ACT_HEARTBEAT:
       {
@@ -709,17 +700,9 @@ void EspClient::timerCallback(Timer* timer)
         _measure();
         break;
 
-      case ACT_WIFI_CONNECT_TIMEOUT:
-        #ifdef _DEBUG
-          Serial.println(F("TIMER: ACT_WIFI_CONNECT_TIMEOUT"));
-        #endif
-
-        if(_wifiConnected) Serial.println(F("WIFI: connected already!"));
-        break;
-
       case ACT_MQTT_RECONNECT:
       {
-        int repetitions = timer->getRepetitions();
+        int repetitions = timer.repetitions;
 
         #ifdef _DEBUG
           Serial.println(F("TIMER: ACT_MQTT_RECONNECT"));
@@ -740,13 +723,8 @@ void EspClient::timerCallback(Timer* timer)
           if(!_mqttConnected)
           {
             // Reset MQTT connect timer to longer interval if wifi is not connected, otherwise same interval
-            // StensTimer *pTimer = StensTimer::getInstance(); 
-            // pTimer->setTimer(this, ACT_MQTT_RECONNECT,
-            //   _wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG, MQTT_MAX_TRY);
-
-            // avoid recreate new timer object!
-            timer->setDelay(_wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG);
-            timer->setRepetitions(MQTT_MAX_TRY)
+            jTimer.setTimer(this, ACT_MQTT_RECONNECT,
+              _wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG, MQTT_MAX_TRY);
           }
         }
         break;
@@ -845,13 +823,14 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   else if(strcmp(topic, CMD_MEASURE) == 0)
   {
     // measure may take longer time, leave the task to timer with one-time timer
-    pTimer->setTimer(this, ACT_CMD_MEASURE, 100);
+    jTimer.setTimer(this, ACT_CMD_MEASURE, 100);
   }
   else if(strcmp(topic, CMD_INTERVAL) == 0)
   {
     // reset the interval of the timer
-    _timer_sensor->setDelay(atoi(payload)*1000);
-
+    Timer *pTimer = jTimer.getTimer(ACT_MEASURE);
+    if(NULL != pTimer) jTimer.getTimer(ACT_MEASURE)->delay = atoi(payload)*1000;
+    else Serial.println(F("ERROR: Null measure timer!"));
   }
   else if(strcmp(topic, CMD_RESTART) == 0)
   {

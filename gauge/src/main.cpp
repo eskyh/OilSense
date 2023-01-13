@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include "EspClient.hpp"
 
-#include <StensTimer.h> // https://gitlab.com/arduino-libraries/stens-timer
-
 // Singleton EspClient instance
 EspClient &espClient = EspClient::instance();
 

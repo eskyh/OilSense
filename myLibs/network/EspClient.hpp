@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <AsyncMqttClient.h>
 
-#include "StensTimer.h"
+#include "JTimer.h"
 #include "sensor.hpp"
 #include "Config.hpp"
 
@@ -73,11 +73,11 @@
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
-/* StensTimer:: To allow callbacks on class instances you should let your class implement
-IStensTimerListener and implement its timerCallback function as shown below.
+/* JTimer:: To allow callbacks on class instances you should let your class implement
+IJTimerListener and implement its timerCallback function as shown below.
 Check examples in https://gitlab.com/arduino-libraries/stens-timer
 */
-class EspClient : public IStensTimerListener
+class EspClient : public IJTimerListener
 {
   // Singleton design (e.g., private constructor)
   public:
@@ -94,7 +94,7 @@ class EspClient : public IStensTimerListener
     void setup();
     void loop(); // Main loop, to call at each sketch loop()
 
-    virtual void timerCallback(Timer* timer);
+    virtual void timerCallback(Timer& timer);
 
   protected:
     // std::vector<Sensor> sensors;
@@ -173,7 +173,6 @@ class EspClient : public IStensTimerListener
     // Sensors
     bool _ledBlink = true;
     bool _autoMode = true;
-    Timer* _timer_sensor = NULL; // timer to control measure interval
     std::vector<Sensor*> _sensors;
     void _initSensors();
     void _enableSensor(const char* name, bool enable);
