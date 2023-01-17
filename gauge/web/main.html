@@ -1,16 +1,39 @@
-
-<!DOCTYPE html>
-<html>
+<html lang='en'>
 <head>
-    <meta charset="utf-8"/>
-    <title>Device Setup</title>
-    <link rel="stylesheet" href="bootstrap.css">
-		<link rel="stylesheet" href="style.css">
-		<script src="jsoneditor.js"></script>
-</head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset='utf-8'>
+<title>ESP Device Setup</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<!--script>
+beforeSubmit = function()
+{
+  // assign names to all inputs
+  var sensors = document.getElementById("sensors");
+  for (var i = 0, s = 0; i < sensors.childNodes.length; i++)
+  {
+    var sensor = sensors.childNodes[i];
+    var npin = 0;
+    if (sensor.childNodes.length == 0) continue;
+    var sname = "sensor[" + s + "]";
+    for (var j = 0; j < sensor.childNodes.length; j++)
+    {
+      var itm = sensor.childNodes[j];
+      if (itm.name == 'name') itm.name = sname + "[name]";
+      else if (itm.name == 'type') itm.name = sname + "[type]";
+      else if (itm.name == 'pin')
+      {
+        itm.name = sname + "[pin][" + npin + "]";
+        npin++;
+      }
+    }
+    s++;
+  }
+}
+</script-->
+
+</head> 
 <body>
 
-<!-- Tab links -->
 <div class="tab">
   <button id='tab_config' class="tablinks" onclick="openTab(event, 'config')">Config</button>
   <button id='tab_file_manager' class="tablinks" onclick="openTab(event, 'file_manager')">File Manager</button>
@@ -18,46 +41,92 @@
 </div>
 
 <div id="config" class="tabcontent">
-	<div class="form-group"></div>
-	<div id='editor-container'></div>
-	
-	<button id='get_config' type='button' class='btn btn-primary' width="100">Get Config</button> <!-- do not use type='submit' as we use ajax -->
-	<button id='set_config' type='button' class='btn btn-primary' width="100">Set Config</button>
 
-	<hr>
-	
-	<div class="block_container">
-		<div id='jseditor'>
-			<label for="post"><b>Real-time form json:</b></label>
-			<textarea id="post" rows="25" cols="60"></textarea>
+	<fieldset id="field0" class='config'>
+		<legend>MODULE</legend>
+		<div>
+			<label for="module">Module:</label>
+			<input name='module' id='module' type='text' required=true/>
 		</div>
+	</fieldset>
 
-		<div id='jstxt'>
-			<label for="input"><b>Set form with json strings >> </b>  <button id='setvalue'>Set Form</button></label>
-			<textarea id="input" rows="24" cols="60"></textarea>
+	<fieldset id="field1" class='config'>
+		<legend>NETWORK</legend>
+		<div>
+			<label for="ssid">SSID:</label>
+			<input name='ssid' id='ssid' type='text' value='' />
 		</div>
+		<div>
+			<label for="pass">Pass:</label>
+			<input name='pass' id='pass' type='text' value='' />
+		</div>
+		<div>
+			<label for="ip">Static IP:</label>
+			<input name='ip' id='ip' type='text' value='' />
+		</div>
+		<div>
+			<label for="gateway">Gateway:</label>
+			<input name='gateway' id='gateway' type='text' value='' />
+		</div>
+		<div>
+			<label for="apPass">AP Pass:</label>
+			<input name='apPass' id='apPass' type='text' value='' />
+		</div>
+		<div>
+			<label for="otaPass">OTA Pass:</label>
+			<input name='otaPass' id='otaPass' type='text' value='' />
+		</div>
+	</fieldset>
+
+	<fieldset id="field2" class='config'>
+		<legend>MQTT</legend>
+		<div>
+			<label for="mqttServer">Server:</label>
+			<input name='mqttServer' id='mqttServer' type='text' value='' />
+		</div>
+		<div>
+			<label for="mqttPort">Port:</label>
+			<input name='mqttPort' id='mqttPort' type='text' value='' />
+		</div>
+		<div>
+			<label for="mqttUser">User:</label>
+			<input name='mqttUser' id='mqttUser' type='text' value='' />
+		</div>
+		<div>
+			<label for="mqttPass">Pass:</label>
+			<input name='mqttPass' id='mqttPass' type='text' value='' />
+		</div>
+	</fieldset>
+
+	<fieldset id="field3">
+		<legend>SENSORS
+			<input type="text" id='nsensors' value='0' size='2' disabled>
+			<input type="button" value='+' id='add_sensor'>
+		</legend>       
+		<div id='sensors' class='sensors'></div>
+	</fieldset>
+
+	<div id='btndiv'>
+		<button id='get_config' width="100">Get Config</button> <!-- do not use type='submit' as we use ajax -->
+		<button id='set_config' width="100">Set Config</button>
+		
+		<button id='get_config_json' width="100" onclick="var js=getConfigJson(); document.getElementById('output').value=JSON.stringify(js,null,2);">Get Config Json</button>
+		<button id='set_config_json' width="100" onclick="var js=JSON.parse(document.getElementById('output').value); setConfigJson(js);">Set Config Json</button>
 	</div>
 
 </div>
 
 <div id="file_manager" class="tabcontent">
-  <h3>File Manager</h3>
 	<!-- <button id='filelist' type='button' class='btn btn-primary' width="100">Filelist</button> -->
-	
-	<label for="upload">      Upload >> </label>
+	<label for="upload">Upload >> </label>
 	<input id='upload' type='file' class='btn btn-primary' width="100">
-
-	<hr>
-	
 	<div id="tbl_filelist"></div>
 </div>
 
 <div id="system" class="tabcontent">
-	<h3>System Manager</h3>
-	<button id='restart' type='button' class='btn btn-primary' width="100">Restart</button>
+	<button id='restart' idth="100">Restart</button>
 	<!-- <button id='reset_wifi' type='button' class='btn btn-primary' width="100">Reset Wifi</button> -->
 </div>
-
 
 <div class="block_container">
 	<div id='jsresp'>
@@ -67,508 +136,7 @@
 	</div>
 </div>
 
-
-<p>
-		The form is set to send a <code>GET</code> request to the same page.
-		A change event listener has been added to the editor so that whenever the form changes, the editor value
-		is stored in a hidden input using <code>JSON.stringify()</code>.
-</p>
-
-<p>
-		The option <code>use_name_attributes</code> was set to <code>false</code>
-		to avoid sending the other field with the request.
-</p>
-<p>
-		When the form is submitted only the hidden input is sent in the request.
-		This allows to send data structures like arrays and object.
-		Also the same schema that is used to build the form can be used as parameter to backend json validators tools.
-		Try yourself, submit the form and look in the network tab of the developer tool.
-</p>
-
-<hr>
-
-<h2>Get params</h2>
-<pre id="get-params"></pre>
-
-<script>
-function openTab(evt, tabName) {
-  // Declare all variables
-  var i, tabcontent, tablinks;
-
-  // Get all elements with class="tabcontent" and hide them
-  tabcontent = document.getElementsByClassName("tabcontent");
-  for (i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = "none";
-  }
-
-  // Get all elements with class="tablinks" and remove the class "active"
-  tablinks = document.getElementsByClassName("tablinks");
-  for (i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(" active", "");
-  }
-
-  // Show the current tab, and add an "active" class to the button that opened the tab
-  document.getElementById(tabName).style.display = "block";
-  evt.currentTarget.className += " active";
-}
-
-document.getElementById('tab_file_manager').click()
-</script>
-
-<script>
-
-//var config = `%CONFIG%`;
-var config = '';
-
-var get_config = document.getElementById('get_config')
-get_config.onclick = function(event){ getConfig() }
-
-function getConfig(){
-	var xhr = new XMLHttpRequest()
-	//open the request
-	xhr.open('get', '/api/config/get', true)
-	xhr.setRequestHeader("Content-Type", "text/plain")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-			document.getElementById('status').innerHTML = 'Config received'
-			document.getElementById('output').value = xhr.responseText
-			
-			try {
-        editor.setValue(JSON.parse(xhr.responseText));
-			} catch (e) {
-        alert(xhr.responseText);
-			}
-		}
-	}
-	
-	xhr.send()
-}
-
-//var form = document.getElementById('config')
-
-var set_config = document.getElementById('set_config')
-set_config.onclick = function(event){
-	var xhr = new XMLHttpRequest()
-	//var formData = new FormData(form)
-	//open the request
-	//xhr.open(form.method, form.action, true)
-	xhr.open('post', '/api/config/set', true)
-	xhr.setRequestHeader("Content-Type", "application/json")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-				// form.reset() //reset form after AJAX success or do something else
-				document.getElementById('status').innerHTML = 'Form received'
-				document.getElementById('output').value = xhr.responseText
-		}
-	}
-
-	//send the form data, NOTE form has more data than editor, send editor json instead!!
-	//xhr.send(JSON.stringify(Object.fromEntries(formData)))
-	xhr.send(JSON.stringify(editor.getValue()))
-
-	//Fail the onsubmit to avoid page refresh.
-	// return false; 
-}
-	
-var restart = document.getElementById('restart')
-restart.onclick = function(event){
-	var xhr = new XMLHttpRequest()
-	//open the request
-	xhr.open('get', '/restart', true)
-	xhr.setRequestHeader("Content-Type", "text/plain")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-			// form.reset() //reset form after AJAX success or do something else
-			// document.getElementById('status').innerHTML = 'Submitted'
-			document.getElementById('status').innerHTML = 'Restart received'
-			document.getElementById('output').value = xhr.responseText
-		}
-	}
-	
-	xhr.send()
-	//Fail the onsubmit to avoid page refresh.
-	// return false; 
-}
-
-//var filelist = document.getElementById('filelist')
-//filelist.onclick = getFileList
-document.body.onload = getFileList
-
-function getFileList(){
-	var xhr = new XMLHttpRequest()
-	//open the request
-	xhr.open('get', '/api/files/list', true)
-	xhr.setRequestHeader("Content-Type", "text/plain")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-			document.getElementById('status').innerHTML = 'Filelist received'
-			document.getElementById('output').value = xhr.responseText
-			
-			try {
-        var js = JSON.parse(xhr.responseText);
-				document.getElementById('tbl_filelist').value = '';
-				addTable(js.files);
-			} catch (e) {
-        alert(xhr.responseText);
-			}
-		}
-	}
-	
-	xhr.send()
-}	
-
-var removeFile = function(filename){
-	var formData = new FormData()
-	formData.append('filename', filename)
-
-	var xhr = new XMLHttpRequest()
-	xhr.open('POST', '/api/files/remove', true)	
-	
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-			document.getElementById('status').innerHTML = 'RmvFile received'
-			document.getElementById('output').value = xhr.responseText
-			
-			//filelist.click(); // refresh file list
-			getFileList();
-			alert('Done remove file!');
-		}
-	}
-	
-	xhr.send(formData)
-}
-	
-// https://researchhubs.com/post/computing/javascript/upload-files-with-ajax.html		
-var upload = document.getElementById('upload')
-upload.onchange = function () {
-
-	// Get the selected files from the input.
-	var files = this.files;
-	
-	// Create a new FormData object.
-	var formData = new FormData();
-	
-	// Loop through each of the selected files.
-	 for (var i = 0; i < files.length; i++) {
-		 var file = files[i];
-	 
-		 // Check the file type.
-//		 if (!file.type.match('image.*')) {
-	//		 continue;
-		// }
-	 
-		 // Add the file to the request.
-		formData.append('files[]', file, file.name);
-	 }
-	
-	var xhr = new XMLHttpRequest()
-	xhr.open('POST', 'api/files/upload', true);
-	
-	// Set up a handler for when the request finishes.
-	xhr.onload = function () {
-		if (xhr.status === 200) {
-			// File(s) uploaded.
-			//filelist.click(); // refresh file list
-			getFileList();
-			alert('Uploaded!');
-		} else {
-			alert('An error occurred!');
-		}
-	};
-	
-	// Send the Data.
-	xhr.send(formData);
-	
-  //alert('Selected file: ' + this.value);
-}
+<script src="espman.js"></script>
 		
-function addTable(flist) {
-  var myTableDiv = document.getElementById("tbl_filelist");
-	
-	myTableDiv.innerHTML = '';
-
-  var table = document.createElement('TABLE');
-  table.border = '1';
-
-  var tableBody = document.createElement('TBODY');
-  table.appendChild(tableBody);
-
-	// header
-	var tr = document.createElement('TR');
-	tableBody.appendChild(tr);
-	
-	var width = ['300', '100']
-	var header = ['Files', 'Size']
-	for (var j = 0; j < 2; j++) {
-		var th = document.createElement('TH');
-		th.width = width[j];
-		th.appendChild(document.createTextNode(header[j]));
-		tr.appendChild(th);
-	}
-	
-  for (var i=0; i<flist.length;i++){
-    var tr = document.createElement('TR');
-    tableBody.appendChild(tr);
-		
-		var filename = flist[i]
-		var td = document.createElement('TD');
-		td.width = width[0];
-		td.appendChild(document.createTextNode(filename));
-		tr.appendChild(td);
-
-		td = document.createElement('TD');
-		td.width = width[1];
-		
-		var button = document.createElement("button");
-		button.innerHTML = '-'
-		button.name = filename
-		button.onclick = function(){
-			removeFile(this.name);
-		};
-		
-		td.appendChild(button);
-		tr.appendChild(td);
-  }
-  myTableDiv.appendChild(table);
-}
-		
-/*
-var filelist = document.getElementById('filelist')
-filelist.onclick = function(event){
-fetch('/api/files/list')
-  .then(function (response) {
-    return response.json();
-  })
-  .then(function (data) {
-    appendData(data);
-  })
-  .catch(function (err) {
-    console.log(err);
-  });
-*/
-	
-/*
-const ajax = async (config) => {
-    const request = await fetch(config.url, {
-        method: config.method,
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config.payload)
-    });
-    response = await request.json();
-    console.log('response', response)
-    return response
-}
-
-var filelist = document.getElementById('filelist')
-filelist.onclick = function(event){
-	// usage
-	response = ajax({
-			method: 'get',
-			url: '/api/files/list',
-			payload: ''//"name": "haha"}
-	})
-	document.getElementById('output').value = response;
-}*/
-
-		
-		
-/*
-var reset_wifi = document.getElementById('reset_wifi')
-reset_wifi.onclick = function(event){
-        var xhr = new XMLHttpRequest()
-        //open the request
-        xhr.open('get', '/reset_wifi', true)
-        xhr.setRequestHeader("Content-Type", "text/plain")
-
-				xhr.send()
-
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState == XMLHttpRequest.DONE) {
-                // form.reset() //reset form after AJAX success or do something else
-								// document.getElementById('status').innerHTML = 'Submitted'
-								document.getElementById('output').value = xhr.responseText
-            }
-        }
-        //Fail the onsubmit to avoid page refresh.
-        // return false; 
-    }
-*/
-
-</script>
-<script>
-  var params = {}
-  for (const [key, value] of new URLSearchParams(window.location.search).entries()) {
-    params[key] = value
-    console.log(key, value)
-  }
-  document.querySelector('#get-params').textContent = JSON.stringify(params, null, 2)
-  var schema = {
-    use_name_attributes: false,
-    theme: 'bootstrap4',
-    disable_edit_json: true,
-    disable_properties: true,
-    disable_collapse: true,
-		compact: true,
-    schema: {
-      'title': 'ESP Device Setup',
-      'type': 'object',
-      'required': [
-        'module',
-        'wifi',
-				'mqtt',
-        'sensors'
-      ],
-      'properties': {
-        'module': {
-					'title': 'Module',
-          'type': 'string',
-          'description': 'Module name, used as dns name for OTA and ssid in AP mode.',
-          'minLength': 8,
-					'maxLength': 8,
-          'default': 'ESP8266'
-        },
-        'wifi': {
-          'type': 'object',
-          'title': 'WiFi',
-          'properties': {
-            'ssid': {
-							'title': 'SSID',
-              'type': 'string',
-              'default': 'ESky'
-            },
-            'pass': {
-							'title': 'Password',
-              'type': 'string',
-              'default': ''
-            }
-          }
-        },
-				'ip': {
-					'title': 'Static IP',
-					'type': 'string',
-					'default': '192.168.0.190'
-				},
-				'gateway': {
-					'title': 'Gateway',
-					'type': 'string',
-					'default': ''
-				},
-				'appass': {
-					'title': 'Hotspot pass (AP)',
-					'type': 'string',
-					'minLength': 8,
-					'default': ''
-				},
-				'otapass': {
-					'title': 'OTA pass',
-					'type': 'string',
-					'default': ''
-				},
-        'mqtt': {
-          'type': 'object',
-          'title': 'MQTT',
-          'properties': {
-            'server': {
-							'title': 'Server',
-              'type': 'string',
-              'default': 'raspberrypi.local'
-            },
-            'port': {
-							'title': 'Port',
-              'type': 'integer',
-              'default': 1883
-            },
-            'serverport': {
-              'type': 'string',
-              'description': 'This is generated automatically from the previous two fields',
-              'template': '{{server}}:{{port}}',
-              'watch': {
-                'server': 'mqtt.server',
-                'port': 'mqtt.port'
-              }
-            },
-            'user': {
-							'title': 'User',
-              'type': 'string',
-              'default': 'cjjiot'
-            },						
-            'pass': {
-              'type': 'string',
-              'default': ''
-            }
-          }
-        },
-        'sensors': {
-          'type': 'array',
-          'format': 'tabs',
-          'title': 'Sensors',
-          'uniqueItems': true,
-          'items': {
-            'type': 'object',
-            'title': 'Sensor',
-            'properties': {
-              'type': {
-                'type': 'string',
-                'enum': [
-                  'HC-SR04',
-                  'VL53L0X',
-                  'DHT11'
-                ],
-                'default': ''
-              },
-              'name': {
-                'type': 'string'
-              },
-							'pins': {
-                'type': 'array',
-								'format': 'table',
-								'items': {
-									'type': 'string',
-									'enum': [
-										'D0',
-										'D1',
-										'D2',
-										'D3',
-										'D4',
-										'D5',
-										'D6',
-										'D7',
-										'D8',
-										'D9',
-										'RX',
-										'TX'
-									],
-									'default': ''
-								}
-              }
-            }
-					}
-        }
-      }
-    }
-  }
-	
-  var editor = new JSONEditor(document.querySelector('#editor-container'), schema)
-
-	document.getElementById('setvalue').onclick = function(event){
-		editor.setValue(JSON.parse(document.getElementById('input').value))
-	}
-
-  
-	editor.on('ready', function () {
-    // editor.setValue(config); // set the config
-		// document.querySelector('#input').value = config
-		
-		//editor.setValue(getConfig())
-		getConfig()
-  })
-  
-	editor.on('change', function () {
-    document.querySelector('#post').value = JSON.stringify(editor.getValue())
-  })
-</script>
 </body>
 </html>
