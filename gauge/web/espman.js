@@ -22,8 +22,6 @@ function openTab(evt, tabName) {
   evt.currentTarget.className += " active";
 }
 
-document.getElementById('tab_file_manager').click();
-
 //---------------------------------------------------------------------------
 // create form
 
@@ -347,13 +345,6 @@ restart.onclick = function(event){
 	// return false; 
 }
 
-//var filelist = document.getElementById('filelist')
-//filelist.onclick = getFileList
-document.body.onload = function() {
-	getConfig();
-	getFileList()
-};
-
 function getFileList(){
 	var xhr = new XMLHttpRequest()
 	//open the request
@@ -366,10 +357,10 @@ function getFileList(){
 			
 			try {
         var js = JSON.parse(xhr.responseText);
-				document.getElementById('tbl_filelist').value = '';
+				document.getElementById('filelist').value = '';
 				addTable(js.files);
 			} catch (e) {
-        alert(xhr.responseText);
+        alert(e.message);
 			}
 		}
 	}
@@ -443,19 +434,19 @@ upload.onchange = function () {
 }
 		
 function addTable(flist) {
-  var myTableDiv = document.getElementById("tbl_filelist");
+  var myTableDiv = document.getElementById("filelist");
 	
 	myTableDiv.innerHTML = '';
 
   var table = document.createElement('TABLE');
-  table.border = '1';
+  table.id = 'tbl_filelist';
 
-  var tableBody = document.createElement('TBODY');
-  table.appendChild(tableBody);
+  // var tableBody = document.createElement('TBODY');
+  // table.appendChild(tableBody);
 
 	// header
 	var tr = document.createElement('TR');
-	tableBody.appendChild(tr);
+	table.appendChild(tr);
 	
 	var width = ['300', '100']
 	var header = ['Files', 'Size']
@@ -468,7 +459,7 @@ function addTable(flist) {
 	
   for (var i=0; i<flist.length;i++){
     var tr = document.createElement('TR');
-    tableBody.appendChild(tr);
+    table.appendChild(tr);
 		
 		var filename = flist[i]
 		var td = document.createElement('TD');
@@ -492,67 +483,10 @@ function addTable(flist) {
   myTableDiv.appendChild(table);
 }
 		
-/*
-var filelist = document.getElementById('filelist')
-filelist.onclick = function(event){
-fetch('/api/files/list')
-  .then(function (response) {
-    return response.json();
-  })
-  .then(function (data) {
-    appendData(data);
-  })
-  .catch(function (err) {
-    console.log(err);
-  });
-*/
-	
-/*
-const ajax = async (config) => {
-    const request = await fetch(config.url, {
-        method: config.method,
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config.payload)
-    });
-    response = await request.json();
-    console.log('response', response)
-    return response
-}
-
-var filelist = document.getElementById('filelist')
-filelist.onclick = function(event){
-	// usage
-	response = ajax({
-			method: 'get',
-			url: '/api/files/list',
-			payload: ''//"name": "haha"}
-	})
-	document.getElementById('output').value = response;
-}*/
-
-		
-		
-/*
-var reset_wifi = document.getElementById('reset_wifi')
-reset_wifi.onclick = function(event){
-        var xhr = new XMLHttpRequest()
-        //open the request
-        xhr.open('get', '/reset_wifi', true)
-        xhr.setRequestHeader("Content-Type", "text/plain")
-
-				xhr.send()
-
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState == XMLHttpRequest.DONE) {
-                // form.reset() //reset form after AJAX success or do something else
-								// document.getElementById('status').innerHTML = 'Submitted'
-								document.getElementById('output').value = xhr.responseText
-            }
-        }
-        //Fail the onsubmit to avoid page refresh.
-        // return false; 
-    }
-*/
+//var filelist = document.getElementById('filelist')
+//filelist.onclick = getFileList
+document.body.onload = function() {
+	getFileList()
+	getConfig();
+	document.getElementById('tab_config').click();
+};

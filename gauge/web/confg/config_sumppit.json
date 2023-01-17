@@ -1,21 +1,21 @@
 {
-    "module": "SumpPit",
-    "wifi": {
-        "ssid": "ESky",
-        "pass": "Hcjwin66"
-    },
-    "ip": "",
-    "gateway": "",
-		"appass": "@1234567",
-    "otapass": "Hcjmosaic@66",
-    "mqtt": {
-        "server": "raspberrypi.local",
-        "port": 1883,
-        "user": "cjjiot",
-        "pass": "Hcjmosaic@66"
-    },
-    "sensors": [
-			{"type": "HC-SR04", "name": "sr04", "pins": ["D1", "D2"]},
-			{"type": "DHT11", "name": "dh11", "pins": ["D5"]}
-    ]
+	"module": "SumpPit",
+	"wifi": {
+		"ssid": "ESky",
+		"pass": "Hcjwin66"
+	},
+	"ip": "",
+	"gateway": "",
+	"appass": "@1234567",
+	"otapass": "Hcjmosaic@66",
+	"mqtt": {
+		"server": "raspberrypi.local",
+		"port": 1883,
+		"user": "cjjiot",
+		"pass": "Hcjmosaic@66"
+	},
+	"sensors": [
+		{"type": "HC-SR04", "name": "sr04", "pins": {"pinTrig": 15,"pinEcho": 0}},
+		{"type": "DHT11", "name": "dh11", "pins": {"pinData": 5}}
+	]
 }
