@@ -74,7 +74,7 @@ class Config
   void printFile(const char *filename);
 #endif
 
-    uint8_t pinByName(String pin);
+    // uint8_t pinByName(String pin);
     // const char* nameByPin(uint8_t pin);
 
 // protected:

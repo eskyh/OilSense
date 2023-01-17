@@ -66,10 +66,8 @@ void EspClient::_initSensors()
     Sensor *pSensor = NULL;
     if(type == "HC-SR04")
     {
-      String pin0 = sensor["pins"][0].as<String>();
-      String pin1 = sensor["pins"][1].as<String>();
-      uint8_t pinTrig = cfg.pinByName(pin0);
-      uint8_t pinEcho = cfg.pinByName(pin1);
+      uint8_t pinTrig = sensor["pins"]["pinTrig"];
+      uint8_t pinEcho = sensor["pins"]["pinEcho"];
       pSensor = new SR04(name.c_str(), pinTrig, pinEcho);
 
     }else if(type == "VL53L0X")
@@ -78,8 +76,7 @@ void EspClient::_initSensors()
 
     }else if(type == "DHT11")
     {
-      String pin0 = sensor["pins"][0].as<String>();
-      uint8_t pinData = cfg.pinByName(pin0);
+      uint8_t pinData = sensor["pins"]["pinData"];
       pSensor = new DH11(name.c_str(), pinData);
     }
 

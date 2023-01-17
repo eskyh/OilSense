@@ -15,20 +15,20 @@ Config& Config::instance()
     return _instance;
 }
 
-uint8_t Config::pinByName(String pin)
-{
-  if(pin == "D1") return D1;
-  else if(pin == "D2") return D2;
-  else if(pin == "D3") return D3;
-  else if(pin == "D4") return D4;
-  else if(pin == "D5") return D5;
-  else if(pin == "D6") return D6;
-  else if(pin == "D7") return D7;
-  else if(pin == "D8") return D8;
-  else if(pin == "RX") return RX;
-  else if(pin == "TX") return TX;
-  else { Serial.print("Wrong pin name: ");Serial.print(pin); return 255;}
-}
+// uint8_t Config::pinByName(String pin)
+// {
+//   if(pin == "D1") return D1;
+//   else if(pin == "D2") return D2;
+//   else if(pin == "D3") return D3;
+//   else if(pin == "D4") return D4;
+//   else if(pin == "D5") return D5;
+//   else if(pin == "D6") return D6;
+//   else if(pin == "D7") return D7;
+//   else if(pin == "D8") return D8;
+//   else if(pin == "RX") return RX;
+//   else if(pin == "TX") return TX;
+//   else { Serial.print("Wrong pin name: ");Serial.print(pin); return 255;}
+// }
 
 // const char* Config::nameByPin(uint8_t pin)
 // {
