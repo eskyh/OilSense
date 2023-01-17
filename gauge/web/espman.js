@@ -86,20 +86,21 @@ function addSensor(sensor)
   ]);
   
   // PINS definition
+	// https://esp8266-shop.com/esp8266-guide/esp8266-nodemcu-pinout/
   const pin_values = new Map([
     ['', 255]
-    , ['D1', 15]
-    , ['D2', 0]
-    , ['D3', 14]
+		// , ['A0', ]
+    , ['D0', 16]  // LED_BUILTIN
+		, ['D1', 5]
+    , ['D2', 4]
+    , ['D3', 0]
     , ['D4', 2]
-    , ['D5', 5]
-    , ['D6', 4]
+    , ['D5', 14]
+    , ['D6', 12]
     , ['D7', 13]
-    , ['D8', 12]
-    , ['D9', 16]
+    , ['D8', 15]
     , ['RX', 3]
-    , ['TX', 1],
-    //	['LED_BUILTIN', 2]
+    , ['TX', 1]
   ]);
 
 	// populate the sensor type options
@@ -263,8 +264,13 @@ function setConfigJson(js)
 	document.getElementById('mqttUser').value 	= js.mqtt.user;
 	document.getElementById('mqttPass').value 	= js.mqtt.pass;
 	
+	// reset sensors
   var sensors = document.getElementById("sensors");
 	sensors.innerHTML = '';
+	
+	// reset counter
+	var counter = document.getElementById('nsensors');
+  counter.value = 0;
 	
 	for(const sensor of js.sensors)
 	{
@@ -285,7 +291,8 @@ function getConfig(){
 	xhr.setRequestHeader("Content-Type", "text/plain")
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == XMLHttpRequest.DONE) {
-			document.getElementById('status').innerHTML = 'Config received'
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': Config received'
 			var js = JSON.parse(xhr.responseText)
 			document.getElementById('output').value = JSON.stringify(js,null,2)
 			
@@ -312,8 +319,9 @@ set_config.onclick = function(event){
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == XMLHttpRequest.DONE) {
 				// form.reset() //reset form after AJAX success or do something else
-				document.getElementById('status').innerHTML = 'Form received'
-				document.getElementById('output').value = xhr.responseText
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': Config submitted'
+			document.getElementById('output').value = xhr.responseText
 		}
 	}
 
@@ -333,9 +341,8 @@ restart.onclick = function(event){
 	xhr.setRequestHeader("Content-Type", "text/plain")
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == XMLHttpRequest.DONE) {
-			// form.reset() //reset form after AJAX success or do something else
-			// document.getElementById('status').innerHTML = 'Submitted'
-			document.getElementById('status').innerHTML = 'Restart received'
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': Restart'
 			document.getElementById('output').value = xhr.responseText
 		}
 	}
@@ -352,7 +359,8 @@ function getFileList(){
 	xhr.setRequestHeader("Content-Type", "text/plain")
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == XMLHttpRequest.DONE) {
-			document.getElementById('status').innerHTML = 'Filelist received'
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': Filelist received'
 			document.getElementById('output').value = xhr.responseText
 			
 			try {
@@ -377,7 +385,8 @@ var removeFile = function(filename){
 	
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == XMLHttpRequest.DONE) {
-			document.getElementById('status').innerHTML = 'RmvFile received'
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': File removed'
 			document.getElementById('output').value = xhr.responseText
 			
 			//filelist.click(); // refresh file list
