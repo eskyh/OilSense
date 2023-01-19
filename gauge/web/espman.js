@@ -283,165 +283,164 @@ function setConfigJson(js)
 // AJAX requests
 
 var get_config = document.getElementById('get_config')
-get_config.onclick = function(event){ getConfig() }
+get_config.onclick = function(event){ getConfig(); }
 
-function getConfig(){
-	var xhr = new XMLHttpRequest()
-	xhr.open('get', '/api/config/get', true)
-	xhr.setRequestHeader("Content-Type", "text/plain")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
+async function getConfig() {
+	try {
+		const response = await fetch('/api/config/get');
+		if (response.ok){
+			const js = await response.json();
 			const date = new Date();
 			document.getElementById('status').innerHTML = date.toTimeString() + ': Config received'
-			var js = JSON.parse(xhr.responseText)
 			document.getElementById('output').value = JSON.stringify(js,null,2)
 			
-			try {
-        setConfigJson(JSON.parse(xhr.responseText));
-				
-			} catch (e) {
-        alert(xhr.responseText);
-			}
-		}
-	}
-	
-	xhr.send()
+			setConfigJson(js);
+		 } else {
+				alert(response.status);
+		 }
+	} catch(e) {
+		alert(e.message);
+	}    
 }
 
 var set_config = document.getElementById('set_config')
-set_config.onclick = function(event){
-	var xhr = new XMLHttpRequest()
-	//var formData = new FormData(form)
-	//open the request
-	//xhr.open(form.method, form.action, true)
-	xhr.open('post', '/api/config/set', true)
-	xhr.setRequestHeader("Content-Type", "application/json")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-				// form.reset() //reset form after AJAX success or do something else
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': Config submitted'
-			document.getElementById('output').value = xhr.responseText
-		}
-	}
-
-	//send the form data, NOTE form has more data than editor, send editor json instead!!
-	//xhr.send(JSON.stringify(Object.fromEntries(formData)))
-	xhr.send(JSON.stringify(getConfigJson()))
-
-	//Fail the onsubmit to avoid page refresh.
-	// return false; 
-}
-	
-var restart = document.getElementById('restart')
-restart.onclick = function(event){
-	var xhr = new XMLHttpRequest()
-	//open the request
-	xhr.open('get', '/restart', true)
-	xhr.setRequestHeader("Content-Type", "text/plain")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': Restart'
-			document.getElementById('output').value = xhr.responseText
-		}
-	}
-	
-	xhr.send()
-	//Fail the onsubmit to avoid page refresh.
-	// return false; 
-}
-
-function getFileList(){
-	var xhr = new XMLHttpRequest()
-	//open the request
-	xhr.open('get', '/api/files/list', true)
-	xhr.setRequestHeader("Content-Type", "text/plain")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': Filelist received'
-			document.getElementById('output').value = xhr.responseText
-			
-			try {
-        var js = JSON.parse(xhr.responseText);
-				document.getElementById('filelist').value = '';
-				addTable(js.files);
-			} catch (e) {
-        alert(e.message);
-			}
-		}
-	}
-	
-	xhr.send()
-}	
-
-var removeFile = function(filename){
-	var formData = new FormData()
-	formData.append('filename', filename)
-
-	var xhr = new XMLHttpRequest()
-	xhr.open('POST', '/api/files/remove', true)	
-	
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState == XMLHttpRequest.DONE) {
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': File removed'
-			document.getElementById('output').value = xhr.responseText
-			
-			//filelist.click(); // refresh file list
-			getFileList();
-			alert('Done remove file!');
-		}
-	}
-	
-	xhr.send(formData)
-}
-	
-// https://researchhubs.com/post/computing/javascript/upload-files-with-ajax.html		
-var upload = document.getElementById('upload')
-upload.onchange = function () {
-
-	// Get the selected files from the input.
-	var files = this.files;
-	
-	// Create a new FormData object.
-	var formData = new FormData();
-	
-	// Loop through each of the selected files.
-	 for (var i = 0; i < files.length; i++) {
-		 var file = files[i];
-	 
-		 // Check the file type.
-//		 if (!file.type.match('image.*')) {
-	//		 continue;
-		// }
-	 
-		 // Add the file to the request.
-		formData.append('files[]', file, file.name);
-	 }
-	
-	var xhr = new XMLHttpRequest()
-	xhr.open('POST', 'api/files/upload', true);
-	
-	// Set up a handler for when the request finishes.
-	xhr.onload = function () {
-		if (xhr.status === 200) {
-			// File(s) uploaded.
-			//filelist.click(); // refresh file list
-			getFileList();
-			alert('Uploaded!');
-		} else {
-			alert('An error occurred!');
-		}
+set_config.onclick = async (event) => {
+	const settings = {
+		method: 'POST',
+		headers: {
+			'Accept': 'application/json',
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(getConfigJson())
 	};
 	
-	// Send the Data.
-	xhr.send(formData);
-	
-  //alert('Selected file: ' + this.value);
-}
+	try {
+		const response = await fetch('/api/config/set', settings);
 		
+		if (response.ok){
+			// const js = await response.json();
+			const txt = await response.text();
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': Config submitted';
+			document.getElementById('output').value = txt;
+		} else {
+			alert(response.status);
+		}
+		
+	} catch(e) {
+		alert(e.message);
+	}    
+}
+
+var restart = document.getElementById('restart')
+restart.onclick = async (event) => {
+	try {
+		const response = await fetch('/restart');
+		if (response.ok){
+			const txt = await response.text();
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': Restart';
+			document.getElementById('output').value = txt;
+		} else {
+			alert(response.status);
+		}
+	} catch(e) {
+		alert(e.message);
+	}    
+}
+
+async function getFileList() {
+	try {
+		const response = await fetch('/api/files/list');
+		if (response.ok){
+			const js = await response.json();
+
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': Filelist received';
+			document.getElementById('output').value = JSON.stringify(js);
+			
+			document.getElementById('filelist').value = '';
+			addTable(js.files);
+
+		 } else {
+				alert(response.status);
+		 }
+	} catch(e) {
+		alert(e.message);
+	}    
+}
+
+async function removeFile(filename) {
+	var formData = new FormData();
+	formData.append('filename', filename);
+	
+	const settings = {
+		method: 'POST',
+		body: formData
+	};
+	
+	try {
+		const response = await fetch('/api/files/remove', settings);
+		if (response.ok){
+			const txt = await response.text();
+			
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': File removed';
+			document.getElementById('output').value = txt;
+			
+			getFileList(); // refresh the file list on the page
+		} else {
+			alert(response.status);
+		}
+		
+	} catch(e) {
+		alert(e.message);
+	}  
+}
+
+// https://researchhubs.com/post/computing/javascript/upload-files-with-ajax.html		
+var upload = document.getElementById('upload')
+upload.onchange = async (event) => {
+	
+	var formData = new FormData(); // Create a new FormData object.
+	
+	if(event.target.files.length == 0) return;
+	
+	// Loop through each of the selected files.
+	for (const file of event.target.files) {
+
+	 // Check the file type.
+	 // if (!file.type.match('image.*')) {
+		 // continue;
+	// }
+
+		formData.append('files[]', file, file.name); // Add the file to the request.
+	}
+
+	const settings = {
+		method: 'POST',
+		body: formData
+	};
+	
+	try {
+		const response = await fetch('api/files/upload', settings);
+		if (response.ok){
+			const js = await response.json();
+			
+			const date = new Date();
+			document.getElementById('status').innerHTML = date.toTimeString() + ': File uploaded!';
+			document.getElementById('output').value = JSON.stringify(js);
+			
+			getFileList(); // refresh the file list on the page
+		} else {
+			alert(response.status);
+		}
+		
+	} catch(e) {
+		alert(e.message);
+	}  
+}
+
 function addTable(flist) {
   var myTableDiv = document.getElementById("filelist");
 	
