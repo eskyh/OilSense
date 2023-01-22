@@ -4,7 +4,7 @@
 #include "Adafruit_VL53L0X.h"
 
 /*
- * Sonar readings with median noise filtering
+ * Laser distance sensor using I2C
  */
 class VL53L0X: public Sensor
 {

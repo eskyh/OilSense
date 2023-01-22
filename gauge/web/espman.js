@@ -1,24 +1,33 @@
-
+	// getElementById
+	function $id(id) {
+		return document.getElementById(id);
+	}
+	
+		// output information
+	function Output(msg) {
+		const date = new Date();
+		const m = $id("output");
+		m.innerHTML = date.toTimeString() + "<br>" + msg + m.innerHTML;
+	}
+	
 //---------------------------------------------------------------------------
 // display/hide tab
 function openTab(evt, tabName) {
-  // Declare all variables
-  var i, tabcontent, tablinks;
 
   // Get all elements with class="tabcontent" and hide them
-  tabcontent = document.getElementsByClassName("tabcontent");
-  for (i = 0; i < tabcontent.length; i++) {
+  const tabcontent = document.getElementsByClassName("tabcontent");
+  for (let i = 0; i < tabcontent.length; i++) {
     tabcontent[i].style.display = "none";
   }
 
   // Get all elements with class="tablinks" and remove the class "active"
-  tablinks = document.getElementsByClassName("tablinks");
-  for (i = 0; i < tablinks.length; i++) {
+  const tablinks = document.getElementsByClassName("tablinks");
+  for (let i = 0; i < tablinks.length; i++) {
     tablinks[i].className = tablinks[i].className.replace(" active", "");
   }
 
   // Show the current tab, and add an "active" class to the button that opened the tab
-  document.getElementById(tabName).style.display = "block";
+  $id(tabName).style.display = "block";
   evt.currentTarget.className += " active";
 }
 
@@ -27,42 +36,42 @@ function openTab(evt, tabName) {
 
 function updateSensorCount(inc)
 {
-  var counter = document.getElementById('nsensors');
-  var n = parseInt(counter.value); //innerHTML
+  const counter = $id('nsensors');
+  const n = parseInt(counter.value); //innerHTML
   counter.value = n + inc;
 }
 
-document.getElementById('add_sensor').onclick = function(){ addSensor(); }
+$id('add_sensor').onclick = function(){ addSensor(); }
 
 // add a sensor
 function addSensor(sensor)
 {
-  var counter = document.getElementById('nsensors');
-  var n = parseInt(counter.value); //innerHTML
+  const counter = $id('nsensors');
+  const n = parseInt(counter.value); //innerHTML
   
   // snesor name
-  var sensorId = "sensor[" + n + "]";
+  const sensorId = "sensor[" + n + "]";
   
-  var div = document.createElement("div");
+  const div = document.createElement("div");
   div.id = sensorId;
   div.className = 'sensor'
   
   // add '-' button
-  var btn = document.createElement("input");
+  const btn = document.createElement("input");
   btn.type = "button";
   btn.value = "-";
   btn.onclick = function()
   {
-    document.getElementById("sensors").removeChild(document.getElementById(sensorId));
+    $id("sensors").removeChild($id(sensorId));
     updateSensorCount(-1);
   }
   div.appendChild(btn);
   
-  //var nameName = sensorId+"[name]";
-  var lblName = document.createElement("label");
+  //const nameName = sensorId+"[name]";
+  const lblName = document.createElement("label");
   //lblName.htmlFor = nameName;
   lblName.innerHTML = "Name:";
-  var inName = document.createElement("input");
+  const inName = document.createElement("input");
   inName.name = "name";
   inName.type = "text";
   inName.size = "5";
@@ -70,11 +79,11 @@ function addSensor(sensor)
 	if(sensor) inName.value = sensor.name;
   
   // sensor type
-  var typeName = sensorId + "[type]";
-  var lblType = document.createElement("label");
+  const typeName = sensorId + "[type]";
+  const lblType = document.createElement("label");
   //lblType.htmlFor = typeName;
   lblType.innerHTML = "Type:"
-  var selType = document.createElement("select");
+  const selType = document.createElement("select");
   selType.name = "type"; //typeName;
   
   // sensor type definition
@@ -106,7 +115,7 @@ function addSensor(sensor)
 	// populate the sensor type options
   for (let [key, value] of sensor_types)
   {
-    var option = document.createElement("option");
+    const option = document.createElement("option");
     option.value = key;
     option.text = value[0]; //val.charAt(0).toUpperCase() + val.slice(1);
     selType.appendChild(option);
@@ -119,8 +128,8 @@ function addSensor(sensor)
   div.appendChild(selType);
   
   // add pins div
-  var pins = "pins[" + n + "]";
-  var div_pins = document.createElement("div");
+  const pins = "pins[" + n + "]";
+  const div_pins = document.createElement("div");
   div_pins.id = pins;
 	div_pins.name = "pins";
 
@@ -132,24 +141,24 @@ function addSensor(sensor)
     div_pins.innerHTML = '';
   
     // reset pins div per sensor type
-    var vsensor = sensor_types.get(selType.value);
+    const vsensor = sensor_types.get(selType.value);
     if(vsensor.length > 1)
     {
 			// having pins definition
       for (const pinName of vsensor[1])
       {
         // create pin label
-        //var pinName = sensorId + "[pin][" + i + "]";
-        var lblPin = document.createElement("label");
+        //const pinName = sensorId + "[pin][" + i + "]";
+        const lblPin = document.createElement("label");
         lblPin.htmlFor = pinName;
         lblPin.innerHTML = pinName + ':';
         
         // create pin select options
-        var selPin = document.createElement("select");
+        const selPin = document.createElement("select");
         selPin.name = pinName;
         for (let [key, value] of pin_values)
         {
-          var option = document.createElement("option");
+          const option = document.createElement("option");
           option.text = key;
           option.value = value; //val.charAt(0).toUpperCase() + val.slice(1);
           selPin.appendChild(option);
@@ -165,7 +174,7 @@ function addSensor(sensor)
 
 	// update dom
 	div.appendChild(div_pins);
-  document.getElementById("sensors").appendChild(div);
+  $id("sensors").appendChild(div);
   updateSensorCount(1);
 	
 	if(sensor)
@@ -177,15 +186,15 @@ function addSensor(sensor)
 /*  
   for (let i = 0; i < 3; i++)
   {
-    var pinName = sensor + "[pin][" + i + "]";
-    var lblPin = document.createElement("label");
+    const pinName = sensor + "[pin][" + i + "]";
+    const lblPin = document.createElement("label");
     lblPin.htmlFor = pinName;
     lblPin.innerHTML = "Pin:"
-    var selPin = document.createElement("select");
+    const selPin = document.createElement("select");
     selPin.name = "pin"; //pinName;
     for (let [key, value] of pin_values)
     {
-      var option = document.createElement("option");
+      const option = document.createElement("option");
       option.text = key;
       option.value = value; //val.charAt(0).toUpperCase() + val.slice(1);
       selPin.appendChild(option);
@@ -199,36 +208,36 @@ function addSensor(sensor)
 // get json data from web config
 function getConfigJson()
 {
-	const data = {};
-	data.module = document.getElementById('module').value;
+	let data = {};
+	data.module = $id('module').value;
 	
-	data.wifi={'ssid':document.getElementById('ssid').value};
-	data.wifi.pass = document.getElementById('pass').value;
+	data.wifi={'ssid': $id('ssid').value};
+	data.wifi.pass = $id('pass').value;
 	
-	data.ip = document.getElementById('ip').value;
-	data.gateway = document.getElementById('gateway').value;
-	data.appass = document.getElementById('apPass').value;
-	data.otapass = document.getElementById('otaPass').value;
+	data.ip = $id('ip').value;
+	data.gateway = $id('gateway').value;
+	data.appass = $id('apPass').value;
+	data.otapass = $id('otaPass').value;
 	
-	data.mqtt = {'server': document.getElementById('mqttServer').value};
-	data.mqtt.port = Number(document.getElementById('mqttPort').value);
-	data.mqtt.user = document.getElementById('mqttUser').value;
-	data.mqtt.pass = document.getElementById('mqttPass').value;
+	data.mqtt = {'server': $id('mqttServer').value};
+	data.mqtt.port = Number($id('mqttPort').value);
+	data.mqtt.user = $id('mqttUser').value;
+	data.mqtt.pass = $id('mqttPass').value;
 	
 	data.sensors = [];
 	
-  var sensors = document.getElementById("sensors");
-  for(sitm of sensors.childNodes)
+  const sensors = $id("sensors");
+  for(let sitm of sensors.childNodes)
 	{
-		var sensor = {};
-		for(itm of sitm.childNodes)
+		let sensor = {};
+		for(let itm of sitm.childNodes)
 		{
       if (itm.name == 'name') sensor.name = itm.value;
       else if (itm.name == 'type') sensor.type = itm.value;
       else if (itm.name == 'pins')
       {
-				var pins = {};
-				var hasPin = false;
+				let pins = {};
+				let hasPin = false;
 				for(pin of itm.childNodes)
 				{
 					if(pin.tagName === 'SELECT') // make sure it is select, not labels
@@ -250,26 +259,26 @@ function getConfigJson()
 // set json data from web config
 function setConfigJson(js)
 {
-	document.getElementById('module').value = js.module;
+	$id('module').value = js.module;
 	
-	document.getElementById('ssid').value 		= js.wifi.ssid;
-	document.getElementById('pass').value 		= js.wifi.pass;
-	document.getElementById('ip').value 		 	= js.ip;
-	document.getElementById('gateway').value 	= js.gateway;
-	document.getElementById('apPass').value 	= js.appass;
-	document.getElementById('otaPass').value 	= js.otapass;
+	$id('ssid').value 		= js.wifi.ssid;
+	$id('pass').value 		= js.wifi.pass;
+	$id('ip').value 		 	= js.ip;
+	$id('gateway').value 	= js.gateway;
+	$id('apPass').value 	= js.appass;
+	$id('otaPass').value 	= js.otapass;
 	
-	document.getElementById('mqttServer').value = js.mqtt.server;
-	document.getElementById('mqttPort').value 	= js.mqtt.port;
-	document.getElementById('mqttUser').value 	= js.mqtt.user;
-	document.getElementById('mqttPass').value 	= js.mqtt.pass;
+	$id('mqttServer').value = js.mqtt.server;
+	$id('mqttPort').value 	= js.mqtt.port;
+	$id('mqttUser').value 	= js.mqtt.user;
+	$id('mqttPass').value 	= js.mqtt.pass;
 	
 	// reset sensors
-  var sensors = document.getElementById("sensors");
+  const sensors = $id("sensors");
 	sensors.innerHTML = '';
 	
 	// reset counter
-	var counter = document.getElementById('nsensors');
+	const counter = $id('nsensors');
   counter.value = 0;
 	
 	for(const sensor of js.sensors)
@@ -278,21 +287,38 @@ function setConfigJson(js)
 	}
 }
 
-
 //---------------------------------------------------------------------------
 // AJAX requests
 
-var get_config = document.getElementById('get_config')
-get_config.onclick = function(event){ getConfig(); }
+// real-time update the configuration in config editor
+$id('config').onchange = async (event) => {
+	if(event.target.id === 'config_edit') return;
+
+	const js = getConfigJson();
+	$id('config_edit').value = JSON.stringify(js,null,2);
+	// Output(
+		// "<b>Get config json:</b><br><pre>" + JSON.stringify(js,null,2) + "</pre>"
+	// );
+}
+
+$id('set_config_json').onclick = async (event) => {
+	const js = JSON.parse($id('config_edit').value);
+	setConfigJson(js);
+}
 
 async function getConfig() {
 	try {
 		const response = await fetch('/api/config/get');
 		if (response.ok){
-			const js = await response.json();
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': Config received'
-			document.getElementById('output').value = JSON.stringify(js,null,2)
+			const txt = await response.text(); // original text
+			// const js = await response.json();
+			const js = JSON.parse(txt);
+			
+			$id('config_edit').value = JSON.stringify(js,null,2);
+			
+			Output(
+				"<b>Get config:</b><pre>" + txt + "</pre>"
+			);
 			
 			setConfigJson(js);
 		 } else {
@@ -303,8 +329,11 @@ async function getConfig() {
 	}    
 }
 
-var set_config = document.getElementById('set_config')
-set_config.onclick = async (event) => {
+$id('get_config').onclick = async (event) => {
+	getConfig();
+}
+
+$id('set_config').onclick = async (event) => {
 	const settings = {
 		method: 'POST',
 		headers: {
@@ -320,9 +349,15 @@ set_config.onclick = async (event) => {
 		if (response.ok){
 			// const js = await response.json();
 			const txt = await response.text();
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': Config submitted';
-			document.getElementById('output').value = txt;
+			
+			Output(
+				"<b>Set config:</b><pre>" + txt + "</pre>"
+			);
+
+			// const date = new Date();
+			// $id('status').innerHTML = date.toTimeString() + ': Config submitted';
+			// $id('output').value = txt;
+			
 		} else {
 			alert(response.status);
 		}
@@ -332,15 +367,19 @@ set_config.onclick = async (event) => {
 	}    
 }
 
-var restart = document.getElementById('restart')
-restart.onclick = async (event) => {
+$id('restart').onclick = async (event) => {
 	try {
 		const response = await fetch('/restart');
 		if (response.ok){
 			const txt = await response.text();
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': Restart';
-			document.getElementById('output').value = txt;
+			// const date = new Date();
+			// $id('status').innerHTML = date.toTimeString() + ': Restart';
+			// $id('output').value = txt;
+			
+			Output(
+				"<b>Restart:</b><pre>" + txt + "</pre>"
+			);
+			
 		} else {
 			alert(response.status);
 		}
@@ -355,13 +394,17 @@ async function getFileList() {
 		if (response.ok){
 			const js = await response.json();
 
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': Filelist received';
-			document.getElementById('output').value = JSON.stringify(js);
-			
-			document.getElementById('filelist').value = '';
-			addTable(js.files);
+			// const date = new Date();
+			// $id('status').innerHTML = date.toTimeString() + ': Filelist received';
+			// $id('output').value = JSON.stringify(js);
 
+			Output(
+				"<b>Get filelist:</b><pre>" + JSON.stringify(js) + "</pre>"
+			)
+			
+			$id('filelist').value = '';
+			addTable(js.files);
+			
 		 } else {
 				alert(response.status);
 		 }
@@ -371,7 +414,7 @@ async function getFileList() {
 }
 
 async function removeFile(filename) {
-	var formData = new FormData();
+	const formData = new FormData();
 	formData.append('filename', filename);
 	
 	const settings = {
@@ -384,11 +427,16 @@ async function removeFile(filename) {
 		if (response.ok){
 			const txt = await response.text();
 			
-			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': File removed';
-			document.getElementById('output').value = txt;
+			// const date = new Date();
+			// $id('status').innerHTML = date.toTimeString() + ': File removed';
+			// $id('output').value = txt;
+
+			Output(
+				"<b>File removed:</b><pre>" + filename + "</pre>"
+			)
 			
 			getFileList(); // refresh the file list on the page
+			
 		} else {
 			alert(response.status);
 		}
@@ -398,11 +446,11 @@ async function removeFile(filename) {
 	}  
 }
 
+/*
 // https://researchhubs.com/post/computing/javascript/upload-files-with-ajax.html		
-var upload = document.getElementById('upload')
-upload.onchange = async (event) => {
+$id('upload').onchange = async (event) => {
 	
-	var formData = new FormData(); // Create a new FormData object.
+	const formData = new FormData(); // Create a new FormData object.
 	
 	if(event.target.files.length == 0) return;
 	
@@ -428,8 +476,8 @@ upload.onchange = async (event) => {
 			const js = await response.json();
 			
 			const date = new Date();
-			document.getElementById('status').innerHTML = date.toTimeString() + ': File uploaded!';
-			document.getElementById('output').value = JSON.stringify(js);
+			$id('status').innerHTML = date.toTimeString() + ': File uploaded!';
+			$id('output').value = JSON.stringify(js);
 			
 			getFileList(); // refresh the file list on the page
 		} else {
@@ -440,61 +488,69 @@ upload.onchange = async (event) => {
 		alert(e.message);
 	}  
 }
+*/
 
 function addTable(flist) {
-  var myTableDiv = document.getElementById("filelist");
+  const myTableDiv = $id("filelist");
 	
 	myTableDiv.innerHTML = '';
 
-  var table = document.createElement('TABLE');
+  const table = document.createElement('TABLE');
   table.id = 'tbl_filelist';
 
-  // var tableBody = document.createElement('TBODY');
+  // const tableBody = document.createElement('TBODY');
   // table.appendChild(tableBody);
 
 	// header
-	var tr = document.createElement('TR');
+	const tr = document.createElement('TR');
 	table.appendChild(tr);
 	
-	var width = ['300', '100']
-	var header = ['Files', 'Size']
-	for (var j = 0; j < 2; j++) {
-		var th = document.createElement('TH');
-		th.width = width[j];
+	// const width = ['300', '100']
+	const header = ['Files', 'Size']
+	for (let j = 0; j < 2; j++) {
+		const th = document.createElement('TH');
+		// th.width = width[j];
 		th.appendChild(document.createTextNode(header[j]));
 		tr.appendChild(th);
 	}
 	
-  for (var i=0; i<flist.length;i++){
-    var tr = document.createElement('TR');
+  for (let i=0; i<flist.length;i++){
+    const tr = document.createElement('TR');
     table.appendChild(tr);
 		
-		var filename = flist[i]
-		var td = document.createElement('TD');
-		td.width = width[0];
-		td.appendChild(document.createTextNode(filename));
-		tr.appendChild(td);
+		const filename = flist[i]
+		let td = document.createElement('TD');
+		// td.width = width[0];
 
-		td = document.createElement('TD');
-		td.width = width[1];
-		
-		var button = document.createElement("button");
+		const button = document.createElement("button");
 		button.innerHTML = '-'
 		button.name = filename
 		button.onclick = function(){
 			removeFile(this.name);
 		};
-		
 		td.appendChild(button);
+
+		td.appendChild(document.createTextNode(filename));
+		tr.appendChild(td);
+
+		td = document.createElement('TD');
+		// td.width = width[1];
+
 		tr.appendChild(td);
   }
   myTableDiv.appendChild(table);
 }
-		
-//var filelist = document.getElementById('filelist')
+
+//--------------------------------------------------
+//const filelist = $id('filelist')
 //filelist.onclick = getFileList
+
+$id('clear').onclick = async (event) => {
+		$id("output").innerHTML = '';
+}
+
 document.body.onload = function() {
 	getFileList()
 	getConfig();
-	document.getElementById('tab_config').click();
+	$id('tab_config').click();
 };

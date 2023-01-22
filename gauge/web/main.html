@@ -111,18 +111,43 @@ beforeSubmit = function()
 		<button id='set_config' width="100">Set Config</button>
 		
 		<hr>
-		Web UI functions:
-		<button id='get_config_json' width="100" onclick="var js=getConfigJson(); document.getElementById('output').value=JSON.stringify(js,null,2);">Get Config Json</button>
-		<button id='set_config_json' width="100" onclick="var js=JSON.parse(document.getElementById('output').value); setConfigJson(js);">Set Config Json</button>
+		<label><b>Config Editor:</b></label>
+		<!-- <button id='get_config_json' width="100">Get Config Json</button> -->
+		<button id='set_config_json' width="100">Set Config Json</button>
+		<div class="block_container">
+			<textarea id="config_edit" rows="20" cols="45" spellcheck="false"></textarea>
+		</div>
 	</div>
 
 </div>
 
 <div id="file_manager" class="tabcontent">
 	<!-- <button id='filelist' type='button' class='btn btn-primary' width="100">Filelist</button> -->
-	<label for="upload">Upload >> </label>
-	<input id='upload' type='file' class='btn btn-primary' width="100">
-	<div id="filelist"></div>
+	<!-- <label for="upload">Upload >> </label> -->
+	<!-- <input id='upload' type='file' class='btn btn-primary' width="100"> -->
+
+	<fieldset>
+		<legend>Files</legend>
+		<!-- <b>Used:</b><b>Max:</b> -->
+		<div id="filelist"></div>
+	</fieldset>
+
+	<fieldset>
+		<legend>File Upload</legend>
+
+		<div>
+			<label for="fileselect">Files to upload:</label>
+			<input type="file" id="fileselect" name="fileselect[]" multiple="multiple" />
+			<div id="filedrag">or drop files here</div>
+		</div>
+
+	</fieldset>
+
+	<div id="progress"></div>
+
+	<div id="messages">
+	<p>Status Messages</p>
+	</div>
 </div>
 
 <div id="system" class="tabcontent">
@@ -131,15 +156,13 @@ beforeSubmit = function()
 	<a href="/update"> Firmware update </a> <br>
 </div>
 
-<div class="block_container">
-	<div id='jsresp'>
-		<label for="output"><b>Web response:</b></label>
-		<div id='status' style="color:red"></div>
-		<textarea id="output" rows="35" cols="90"></textarea>
-	</div>
-</div>
+<fieldset>
+	<legend>OUTPUT <button id="clear">Clear</button></legend>
+	<div id="output" class='output'></div>
+</fieldset>
 
 <script src="espman.js"></script>
+<script src="filedrag.js"></script>
 
 </body>
 </html>

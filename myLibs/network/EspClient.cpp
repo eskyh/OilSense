@@ -494,6 +494,12 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     request->send(response);    
   });
 
+  _webServer.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", "Restarted");
+
+    jTimer.setTimer(this, ACT_CMD_RESTART, 100);
+  });
+  
   _webServer.on(PSTR("/api/files/list"), HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("Got list");
 
@@ -549,7 +555,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
         serializeJson(jsonBuffer, JSON);
 
         request->send(200, PSTR("text/html"), JSON);
-        fsUploadFile.close();       
+        fsUploadFile.close();
     }
   });
 
@@ -566,12 +572,6 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     {
       request->send(500, PSTR("text/html"), "File does not exists!");
     }
-  });
-
-  _webServer.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", "Restarted");
-
-    jTimer.setTimer(this, ACT_CMD_RESTART, 100);
   });
 
   // send config.json per client request

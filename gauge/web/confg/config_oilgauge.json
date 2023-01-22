@@ -15,7 +15,7 @@
 		"pass": "Hcjmosaic@66"
 	},
 	"sensors": [
-		{"type": "HC-SR04", "name": "sr04", "pins": {"pinTrig": 15,"pinEcho": 0}},
-		{"type": "DHT11", "name": "dh11", "pins": {"pinData": 5}}
+		{"type": "HC-SR04", "name": "sr04", "pins": {"pinTrig": 5,"pinEcho": 4}},
+		{"type": "DHT11", "name": "dh11", "pins": {"pinData": 14}}
 	]
 }
