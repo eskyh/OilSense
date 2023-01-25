@@ -1,14 +1,26 @@
-	// getElementById
-	function $id(id) {
-		return document.getElementById(id);
-	}
-	
-		// output information
-	function Output(msg) {
-		const date = new Date();
-		const m = $id("output");
-		m.innerHTML = date.toTimeString() + "<br>" + msg + m.innerHTML;
-	}
+// getElementById
+function $id(id) {
+	return document.getElementById(id);
+}
+
+	// output information
+function Output(msg) {
+	const date = new Date();
+	const m = $id("output");
+	m.innerHTML = date.toTimeString() + "<br>" + msg + m.innerHTML;
+}
+
+function toggleVis(id) {
+	const elm = $id(id);
+	const type = elm.getAttribute('type');
+
+	elm.setAttribute(
+			'type',
+			// Switch it to a text field if it's a password field
+			// currently, and vice versa
+			type === 'password' ? 'text' : 'password'
+	);
+}
 	
 //---------------------------------------------------------------------------
 // display/hide tab
@@ -64,6 +76,11 @@ function addSensor(sensor)
   {
     $id("sensors").removeChild($id(sensorId));
     updateSensorCount(-1);
+		
+		// since click button does not trigger onchange updating config_edit,
+		// update here directly
+		const js = getConfigJson();
+		$id('config_edit').value = JSON.stringify(js,null,2);
   }
   div.appendChild(btn);
   

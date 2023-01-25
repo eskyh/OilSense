@@ -58,7 +58,8 @@ beforeSubmit = function()
 		</div>
 		<div>
 			<label for="pass">Pass:</label>
-			<input name='pass' id='pass' type='text' value='' />
+			<input name='pass' id='pass' type='password' value='' />
+			<input type="checkbox" onclick="toggleVis('pass')"></button>
 		</div>
 		<div>
 			<label for="ip">Static IP:</label>
@@ -70,11 +71,13 @@ beforeSubmit = function()
 		</div>
 		<div>
 			<label for="apPass">AP Pass:</label>
-			<input name='apPass' id='apPass' type='text' value='' />
+			<input name='apPass' id='apPass' type='password' value='' />
+			<input type="checkbox" onclick="toggleVis('apPass')"></button>
 		</div>
 		<div>
 			<label for="otaPass">OTA Pass:</label>
-			<input name='otaPass' id='otaPass' type='text' value='' />
+			<input name='otaPass' id='otaPass' type='password' value='' />
+			<input type="checkbox" onclick="toggleVis('otaPass')"></button>
 		</div>
 	</fieldset>
 
@@ -94,7 +97,8 @@ beforeSubmit = function()
 		</div>
 		<div>
 			<label for="mqttPass">Pass:</label>
-			<input name='mqttPass' id='mqttPass' type='text' value='' />
+			<input name='mqttPass' id='mqttPass' type='password' value='' />
+			<input type="checkbox" onclick="toggleVis('mqttPass')"></button>
 		</div>
 	</fieldset>
 

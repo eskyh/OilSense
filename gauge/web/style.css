@@ -148,7 +148,7 @@ legend {
 	display: inline-block;
 }
 
-select, input[type="text"]{
+select, input[type="text"], input[type="password"]{
   outline: 0;
   border-width: 0 0 1px;
   border-color: gray;
@@ -163,6 +163,20 @@ label {
 	display: inline-block;
 	color: #777777;
 	text-align: right;
+}
+
+
+/* Make config editor collapsible */
+#config_edit {
+    height: 1.5em;
+    /* width: 50%; */
+    /* padding: 3px; */
+    transition: all 0.5s ease;
+}
+
+#config_edit:focus {
+    /* height: 4em; */
+		height: auto;
 }
 
 /*------ file list table -------------*/
