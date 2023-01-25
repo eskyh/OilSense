@@ -403,6 +403,7 @@ async function getFileList() {
 			)
 			
 			$id('filelist').value = '';
+			$id('diskinfo').innerHTML = 'Used:' + js.used.toLocaleString() + ' (' + js.used/js.max*100 +'%), Max:' + js.max.toLocaleString();
 			addTable(js.files);
 			
 		 } else {
@@ -518,22 +519,23 @@ function addTable(flist) {
     const tr = document.createElement('TR');
     table.appendChild(tr);
 		
-		const filename = flist[i]
+		const file = flist[i]
 		let td = document.createElement('TD');
 		// td.width = width[0];
 
 		const button = document.createElement("button");
 		button.innerHTML = '-'
-		button.name = filename
+		button.name = file.name
 		button.onclick = function(){
 			removeFile(this.name);
 		};
 		td.appendChild(button);
-
-		td.appendChild(document.createTextNode(filename));
+		td.append(' '); // add space between button and file name
+		td.appendChild(document.createTextNode(file.name));
 		tr.appendChild(td);
 
 		td = document.createElement('TD');
+		td.appendChild(document.createTextNode(file.size.toLocaleString()));
 		// td.width = width[1];
 
 		tr.appendChild(td);

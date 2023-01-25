@@ -23,7 +23,6 @@ EspClient& EspClient::instance()
     return _instance;
 }
 
-// void EspClient::setup(CommandHandler cmdHandler, const char* cmdTopic)
 void EspClient::setup()
 {
   #ifdef _DEBUG
@@ -34,7 +33,8 @@ void EspClient::setup()
   {
     Serial.println(F("Failed to load configuration."));
     setupPortal(true); // blocking mode so other setup is onhold
-  }else
+  }
+  else
   {
     setupPortal(false);
   }
@@ -103,7 +103,7 @@ void EspClient::loop()
   // if(_wifiConnected) 
   ArduinoOTA.handle(); // OTA does not need wifi connected (AP also fine)
 
-  delay(1); 
+  delay(1);
 }
 
 // Initiate a Wifi connection
@@ -510,13 +510,18 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     //get file listing
     Dir dir = LittleFS.openDir("");
     while (dir.next())
-        files.add(dir.fileName()); //.substring(1));
+    {
+      JsonObject file = files.createNestedObject();
+      file["name"] = dir.fileName();
+      file["size"] = dir.fileSize();
+      // files.add(dir.fileName()); //.substring(1));
+    }
 
     //get used and total data
     FSInfo fs_info;
     LittleFS.info(fs_info);
-    jsonBuffer["used"] = String(fs_info.usedBytes);
-    jsonBuffer["max"] = String(fs_info.totalBytes);
+    jsonBuffer["used"] = fs_info.usedBytes;
+    jsonBuffer["max"] = fs_info.totalBytes;
     serializeJson(jsonBuffer, JSON);
     Serial.println(JSON);
     request->send(200, PSTR("text/html"), JSON);
@@ -607,6 +612,8 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   AsyncElegantOTA.begin(&_webServer);  // Start ElegantOTA right before webserver start
 
   _webServer.begin(); // start web server
+
+  if(!_wifiConnected) _startAP();
 
   _printLine();
   Serial.println(F("Config portal on"));

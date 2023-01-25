@@ -42,7 +42,7 @@ class Config
 
     //------------------------------------------------
     // Module name
-    String module;   // module name, used as mqttClientName, otaHost
+    String module="New";   // module name, used as mqttClientName, otaHost
 
     //Wifi
     String ssid;
