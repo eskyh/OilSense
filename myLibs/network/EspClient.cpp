@@ -147,43 +147,9 @@ void EspClient::_connectToWifi()
     }
   }
 
-  Serial.println(F("Starting WiFi scan..."));
-  int scanResult = WiFi.scanNetworks(/*async=*/false, /*hidden=*/true);
-
-  if (scanResult == 0) {
-    Serial.println(F("No networks found"));
-  } else if (scanResult > 0) {
-
+  if ( WiFi.status() != WL_CONNECTED )
+  {
     #ifdef _DEBUG
-    String ssid;
-    int32_t rssi;
-    uint8_t encryptionType;
-    uint8_t* bssid;
-    int32_t channel;
-    bool hidden;
-
-    Serial.printf(PSTR("%d networks found:\n"), scanResult);
-
-    // Print unsorted scan results
-    for (int8_t i = 0; i < scanResult; i++) {
-      WiFi.getNetworkInfo(i, ssid, encryptionType, rssi, bssid, channel, hidden);
-
-      Serial.printf(PSTR("  %02d: [CH %02d] [%02X:%02X:%02X:%02X:%02X:%02X] %ddBm %c %c %s\n"),
-                    i,
-                    channel,
-                    bssid[0], bssid[1], bssid[2],
-                    bssid[3], bssid[4], bssid[5],
-                    rssi,
-                    (encryptionType == ENC_TYPE_NONE) ? ' ' : '*',
-                    hidden ? 'H' : 'V',
-                    ssid.c_str());
-      delay(0);
-    }
-    #endif
-
-    if ( WiFi.status() != WL_CONNECTED )
-    {
-      #ifdef _DEBUG
       Serial.println(F("WIFI_OFF = 0, WIFI_STA = 1, WIFI_AP = 2, WIFI_AP_STA = 3"));
       Serial.print(F("WiFi mode: "));
       Serial.println(WiFi.getMode());
@@ -197,19 +163,20 @@ void EspClient::_connectToWifi()
       Serial.println(F("6 : WL_CONNECT_WRONG_PASSWORD if password is incorrect"));
       Serial.println(F("7 : WL_DISCONNECTED if module is not configured in station mode\n"));
       Serial.print(F("WiFi status:"));
-      #endif
+    #endif
 
-      WiFi.begin(cfg.ssid.c_str(), cfg.pass.c_str());
-      while (WiFi.status() != WL_CONNECTED)
-      {
-        loop();
-        Serial.print(WiFi.status());
-        delay(1000);
-      }
+    WiFi.begin(cfg.ssid.c_str(), cfg.pass.c_str());
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      loop();
+      Serial.print(WiFi.status());
+      delay(1000);
     }
   }
 
+#ifdef ESP8266
   WiFi.setAutoReconnect(true);    // Set whether module will attempt to reconnect to an access point in case it is disconnected.
+#endif
 }
 
 // Try to connect to the MQTT broker and return True if the connection is successfull (blocking)
@@ -245,29 +212,49 @@ void EspClient::_setupWifi()
   //   _printLine();
   // });
 
-  static WiFiEventHandler GOT_IP_HANDLER = WiFi.onStationModeGotIP([&] (const WiFiEventStationModeGotIP& event) {
-    _printLine();
-    Serial.print(F("WiFi: Got IP "));
-    Serial.println(WiFi.localIP().toString().c_str());
-    _printLine();
-
-    //TODO: check if the IP is valide!!! e.g., not 192.168.x.x
-    if(!_wifiConnected) // just got disconnected
+#ifdef ESP8266
+  static WiFiEventHandler GOT_IP_HANDLER = WiFi.onStationModeGotIP(
+    [&](const WiFiEventStationModeGotIP& event)
+#elif defined(ESP32)
+  WiFi.onEvent([&](WiFiEvent_t event, WiFiEventInfo_t info)
+#endif
     {
-      _wifiConnected = true;
+      Serial.println();
+      _printLine();
+      Serial.print(F("WiFi: Got IP "));
+      Serial.println(WiFi.localIP().toString().c_str());
+      _printLine();
 
-      // reconnect MQTT
-      jTimer.setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
+      //TODO: check if the IP is valide!!! e.g., not 192.168.x.x
+      if(!_wifiConnected) // just got disconnected
+      {
+        _wifiConnected = true;
 
-      #ifdef _DEBUG
-        Serial.println("MQTT: Set reconnect timmer");
-      #endif
+        // reconnect MQTT
+        jTimer.setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
 
-      _stopAP();
+        #ifdef _DEBUG
+          Serial.println("MQTT: Set reconnect timmer");
+        #endif
+
+        _stopAP();
+      }
     }
-  });
+#ifdef ESP8266
+  );
+#elif defined(ESP32)
+  , ARDUINO_EVENT_WIFI_STA_GOT_IP);
+#endif
 
-  static WiFiEventHandler DISCONNECT_HANDLER = WiFi.onStationModeDisconnected([&] (const WiFiEventStationModeDisconnected& event) {
+#ifdef ESP8266
+  static WiFiEventHandler DISCONNECT_HANDLER = WiFi.onStationModeDisconnected(
+    [&](const WiFiEventStationModeDisconnected& event)
+#elif defined(ESP32)
+  // WiFi::onEvent is expecting an arduino event, not ESP-IDF system event.
+  // See the options here: https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiGeneric.h#L36-L78
+  WiFi.onEvent([&](WiFiEvent_t event, WiFiEventInfo_t info)
+#endif
+  {
     _printLine();
     Serial.println(F("WiFi: Disconnected"));
     _printLine();
@@ -277,7 +264,12 @@ void EspClient::_setupWifi()
       _startAP();
       _wifiConnected = false;
     }
-  });
+  }
+#ifdef ESP8266
+  );
+#elif defined(ESP32)
+  , ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+#endif
 }
 
 void EspClient::_setupMQTT()
@@ -480,6 +472,10 @@ void EspClient::_setupOTA()
 // parameter: force means force open the portal (even there is no connection issue)
 void EspClient::setupPortal(bool blocking) //char const *apName, char const *apPassword)
  {
+#ifdef _DEBUG
+  Serial.println(F("setupPortal()"));
+#endif
+
   _portalOn = true;         // this will enable the pollPortal call in the loop of main.cpp
   _portalSubmitted = false; // used when portal is in blocking mode. will be set to true when the configuration is done in _handleConfigPortal
 
@@ -505,23 +501,34 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
     String JSON;
     StaticJsonDocument<1000> jsonBuffer;
-    JsonArray files = jsonBuffer.createNestedArray("files");
+    JsonArray jsFiles = jsonBuffer.createNestedArray("files");
  
-    //get file listing
-    Dir dir = LittleFS.openDir("");
-    while (dir.next())
+    //get file listing on root folder (Can be extended to subfolders too)
+    File root = LittleFS.open("/");
+    if(root && root.isDirectory())
     {
-      JsonObject file = files.createNestedObject();
-      file["name"] = dir.fileName();
-      file["size"] = dir.fileSize();
-      // files.add(dir.fileName()); //.substring(1));
+      File file = root.openNextFile();
+      while (file)
+      {
+        if(!file.isDirectory())
+        {
+          JsonObject jsFile = jsFiles.createNestedObject();
+          jsFile["name"] = file.name();
+          jsFile["size"] = file.size();
+          // files.add(file.name()); //.substring(1));
+        }
+
+        file = root.openNextFile();
+      }
     }
 
     //get used and total data
-    FSInfo fs_info;
-    LittleFS.info(fs_info);
-    jsonBuffer["used"] = fs_info.usedBytes;
-    jsonBuffer["max"] = fs_info.totalBytes;
+    // FSInfo fs_info;
+    // LittleFS.info(fs_info);
+    // jsonBuffer["used"] = fs_info.usedBytes;
+    // jsonBuffer["max"] = fs_info.totalBytes;
+    jsonBuffer["used"] = 10;
+    jsonBuffer["max"] = 1000;
     serializeJson(jsonBuffer, JSON);
     Serial.println(JSON);
     request->send(200, PSTR("text/html"), JSON);
@@ -556,7 +563,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
         String JSON;
         StaticJsonDocument<100> jsonBuffer;
 
-        jsonBuffer["success"] = fsUploadFile.isFile();
+        jsonBuffer["success"] = LittleFS.exists(filename); //fsUploadFile.isFile();
         serializeJson(jsonBuffer, JSON);
 
         request->send(200, PSTR("text/html"), JSON);
@@ -611,9 +618,10 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
   AsyncElegantOTA.begin(&_webServer);  // Start ElegantOTA right before webserver start
 
-  _webServer.begin(); // start web server
-
   if(!_wifiConnected) _startAP();
+
+  // Must start webserver after either Wifi or AP started or tcpip crash!!
+  _webServer.begin(); // start web server
 
   _printLine();
   Serial.println(F("Config portal on"));
@@ -635,11 +643,21 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
 void EspClient::_startAP()
 {
+#ifdef _DEBUG
+  Serial.println("_startAP()");
+#endif
+
   if(WiFi.getMode() == WIFI_AP_STA) return;
 
   // construct ssid name
   char ssid[40];    // this will be used as AP WiFi SSID
-  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%zu", cfg.module.c_str(), ESP.getChipId());
+  uint32_t chipID;
+#ifdef ESP8266
+  chipID = ESP.getChipId();
+#elif defined(ESP32)
+  chipID = ESP.getEfuseMac() << 40 >> 40;
+#endif
+  int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%zu", cfg.module.c_str(), chipID);
   if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
 
   // Enable WiFi AP mode  <= This is done in _setupWiFi()
@@ -654,7 +672,7 @@ void EspClient::_startAP()
 
   // NOTE: WiFi.softAP call will change WiFi mode to WIFI_AP_STA
   // Serial.printf("startAP WiFi mode0: %d\n", WiFi.getMode());
-  WiFi.softAP(ssid, cfg.apPass); // wpa2 requires an (exact) 8 character password.
+  WiFi.softAP(ssid, cfg.apPass.c_str()); // wpa2 requires an (exact) 8 character password.
   // Serial.printf("startAP WiFi mode1: %d\n", WiFi.getMode());
 }
 
@@ -918,4 +936,39 @@ void EspClient::_restart(RsCode code)
   #else
       #error Platform not supported
   #endif
+}
+
+// https://iotespresso.com/esp32-captive-portal-fetching-html-using-littlefs/
+// List contents of file system
+// Usage: listDir(LITTLEFS, "/", 0);
+void EspClient::_listDir(fs::FS &fs, const char * dirname, uint8_t levels)
+{
+    // Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println(F("Failed to open directory"));
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(F("Not a directory"));
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            // Serial.print("  DIR : ");
+            // Serial.println(file.name());
+            if(levels){
+                _listDir(fs, file.name(), levels -1);
+            }
+        } else {
+            // Serial.print("  FILE: ");
+            Serial.print(file.name());
+            // Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+        }
+        file = root.openNextFile();
+    }
 }

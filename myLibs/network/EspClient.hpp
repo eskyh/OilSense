@@ -23,7 +23,7 @@
   // #define ESPHTTPUpdateServer ESP8266HTTPUpdateServer
 
 #elif defined(ESP32)
-  #include <WiFiClient.h>
+  #include <WiFi.h>
   // #include <WebServer.h>
   // #include <ESPmDNS.h>
   // #include "ESP32HTTPUpdateServer.h"
@@ -31,6 +31,7 @@
   // #define DEFAULT_MQTT_CLIENT_NAME "ESP32"
   // #define ESPHTTPUpdateServer ESP32HTTPUpdateServer
 
+  #define LED_BUILTIN 33
 #else
     #error Platform not supported
 #endif
@@ -183,6 +184,7 @@ class EspClient : public IJTimerListener
     // void _resetWifi();
     // static void _extractIpAddress(const char* sourceString, short* ipAddress);
 
+    void _listDir(fs::FS &fs, const char * dirname, uint8_t levels=0);
     void _printLine() {
       #ifdef _DEBUG
         Serial.println(F("----------------------------------------------"));
