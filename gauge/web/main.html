@@ -106,6 +106,11 @@ beforeSubmit = function()
 		<legend>SENSORS
 			<input type="text" id='nsensors' value='0' size='2' disabled>
 			<input type="button" value='+' id='add_sensor'>
+			<label for="board">Board:</label>
+			<select name="board" id="board">
+				<option value="WeMo D1 mini">WeMo D1 mini</option>
+				<option value="ESP32-CAM">ESP32-CAM</option>
+			</select>
 		</legend>       
 		<div id='sensors' class='sensors'></div>
 	</fieldset>

@@ -38,7 +38,8 @@
 				data = $.csv.toArray(csv);
 				console.log(data)
 		});*/
-		
+
+
 		
 		Highcharts.setOptions({
 			// https://stackoverflow.com/questions/35008276/highcharts-line-chart-is-using-wrong-timezone
@@ -53,10 +54,11 @@
 		});
 
 		$(document).ready(function() {
-		    if (isAPIAvailable()) {
-		        $('#files').bind('change', handleFileSelect);
-						$('#btnReload').bind( "click", function() {});
-		    }
+			if (isAPIAvailable()) {
+				$('#files').bind('change', handleFileSelect);
+				// prevent select the same file, no triggering. reset the last file to null.
+				$('#files').bind('click', function () { this.value = null; });
+			}
 		});
 
 		function isAPIAvailable() {

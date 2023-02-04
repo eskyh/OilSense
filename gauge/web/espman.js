@@ -113,8 +113,9 @@ function addSensor(sensor)
   
   // PINS definition
 	// https://esp8266-shop.com/esp8266-guide/esp8266-nodemcu-pinout/
-  const pin_values = new Map([
-    ['', 255]
+  // const pin_values = new Map([
+	const pin_d1_mini = new Map([
+      ['', 255]
 		// , ['A0', ]
     , ['D0', 16]  // LED_BUILTIN
 		, ['D1', 5]
@@ -129,6 +130,26 @@ function addSensor(sensor)
     , ['TX', 1]
   ]);
 
+	const pin_esp32_cam = new Map([
+      ['', 255]
+    , ['GPIO 0', 0]
+		, ['GPIO 1', 1]
+		, ['GPIO 2', 2]
+		, ['GPIO 3', 3]
+		, ['GPIO 4', 4]
+		, ['GPIO 12', 12]
+		, ['GPIO 13', 13]
+		, ['GPIO 14', 14]
+		, ['GPIO 15', 15]
+		, ['GPIO 16', 16]
+  ]);
+
+	// -- define boards and pins- 
+	const boards = new Map([
+      ['WeMo D1 mini', pin_d1_mini]
+		, ['ESP32-CAM', pin_esp32_cam]
+  ]);
+	
 	// populate the sensor type options
   for (let [key, value] of sensor_types)
   {
@@ -173,6 +194,9 @@ function addSensor(sensor)
         // create pin select options
         const selPin = document.createElement("select");
         selPin.name = pinName;
+				
+				const board_name = $id('board').value;
+				const pin_values = boards.get($id('board').value);
         for (let [key, value] of pin_values)
         {
           const option = document.createElement("option");
@@ -241,6 +265,8 @@ function getConfigJson()
 	data.mqtt.user = $id('mqttUser').value;
 	data.mqtt.pass = $id('mqttPass').value;
 	
+	data.board = $id('board').value;
+	
 	data.sensors = [];
 	
   const sensors = $id("sensors");
@@ -289,6 +315,8 @@ function setConfigJson(js)
 	$id('mqttPort').value 	= js.mqtt.port;
 	$id('mqttUser').value 	= js.mqtt.user;
 	$id('mqttPass').value 	= js.mqtt.pass;
+	
+	$id('board').value      = js.board;
 	
 	// reset sensors
   const sensors = $id("sensors");
