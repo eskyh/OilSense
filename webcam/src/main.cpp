@@ -1,26 +1,26 @@
-// #include <Arduino.h>
-// #include "EspClient.hpp"
+#include <Arduino.h>
+#include "EspClient.hpp"
 
-// // Singleton EspClient instance
-// EspClient &espClient = EspClient::instance();
+// Singleton EspClient instance
+EspClient &espClient = EspClient::instance();
 
-// #define LED_BUILTIN 33  // The red LED (not flash LED) of the ESP32-CAM board
+#define LED_BUILTIN 33  // The red LED (not flash LED) of the ESP32-CAM board
 
-// void setup()
-// {
-//   //-- Initialize Pins and Serial speed
-//   pinMode(LED_BUILTIN, OUTPUT);    // Initialize digital pin LED_BUILTIN as an output (used as ESP heartbeat indicator).
-//   digitalWrite(LED_BUILTIN, HIGH); // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)
-//   Serial.begin(115200);            // Serial Communication baudrate: 9600, 115200, 250000
+void setup()
+{
+  //-- Initialize Pins and Serial speed
+  pinMode(LED_BUILTIN, OUTPUT);    // Initialize digital pin LED_BUILTIN as an output (used as ESP heartbeat indicator).
+  digitalWrite(LED_BUILTIN, HIGH); // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)
+  Serial.begin(115200);            // Serial Communication baudrate: 9600, 115200, 250000
 
-//   //-- setup the singleton EspClient instance
-//   espClient.setup();
-// }
+  //-- setup the singleton EspClient instance
+  espClient.setup();
+}
 
-// void loop()
-// {
-//   espClient.loop(); // task handling
-// }
+void loop()
+{
+  espClient.loop(); // task handling
+}
 
 /*********
   Rui Santos
@@ -37,6 +37,8 @@
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
 *********/
+
+/*
 
 #include <FS.h>
 
@@ -72,11 +74,6 @@ const char* password = "Hcjwin66";
 // This project was tested with the AI Thinker Model, M5STACK PSRAM Model and M5STACK WITHOUT PSRAM
 
 #define CAMERA_MODEL_AI_THINKER
-//#define CAMERA_MODEL_M5STACK_PSRAM
-//#define CAMERA_MODEL_M5STACK_WITHOUT_PSRAM
-
-// Not tested with this model
-//#define CAMERA_MODEL_WROVER_KIT
 
 #if defined(CAMERA_MODEL_WROVER_KIT)
   #define PWDN_GPIO_NUM    -1
@@ -307,3 +304,5 @@ void loop() {
   // Do nothing. Everything is done in another task by the web server
   delay(10000);
 }
+
+*/

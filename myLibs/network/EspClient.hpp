@@ -36,6 +36,8 @@
     #error Platform not supported
 #endif
 
+// Known issu: ESP32 FS.h does not have interface to get used/max disk space!!
+
 //----------------------
 #define MQTT_SUB_CMD 	"/cmd/#"
 
@@ -70,7 +72,7 @@
 #define MQTT_RECONNECT_INTERVAL  5e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_RECONNECT_INTERVAL_LONG  10e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_SUBSCRIBE_DELAY     1e3    // MQTT subscribe attempt delay after connected
-#define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout, 20s bu default
+#define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout, 20s by default
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
@@ -164,11 +166,12 @@ class EspClient : public IJTimerListener
       
       ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
       
-      // One off timers
+      //-- One-off timers
       ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
       // ACT_CMD_RESET_WIFI,
-      ACT_CMD_RESTART,          // One off restart
-      ACT_CMD_MEASURE           // One off manual measure timer
+      ACT_CMD_SYNC_NTP,         // synch internet time
+      ACT_CMD_RESTART,          // restart
+      ACT_CMD_MEASURE           // manual measure timer
     };
 
     // Sensors
@@ -184,7 +187,7 @@ class EspClient : public IJTimerListener
     // void _resetWifi();
     // static void _extractIpAddress(const char* sourceString, short* ipAddress);
 
-    void _listDir(fs::FS &fs, const char * dirname, uint8_t levels=0);
+    // void _listDir(fs::FS &fs, const char * dirname, uint8_t levels=0);
     void _printLine() {
       #ifdef _DEBUG
         Serial.println(F("----------------------------------------------"));

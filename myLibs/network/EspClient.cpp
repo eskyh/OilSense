@@ -1,9 +1,8 @@
-
 #include "EspClient.hpp"
 
 #include <ArduinoOTA.h>
 #include <FS.h>
-#include "LittleFS.h"
+#include <LittleFS.h>
 
 #include "AsyncJson.h"
 #include "ArduinoJson.h"
@@ -47,6 +46,12 @@ void EspClient::setup()
 
   _initSensors();
 
+  //-- set time zone
+  // Timer is created in the event handling of Wifi gets connected
+  // https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
+  const char* TZstr = "EST+5EDT,M3.2.0/2,M11.1.0/2"; //"PKT-5";
+  configTime(TZstr, "pool.ntp.org");  
+
   //-- Create timers
   jTimer.setInterval(this, ACT_HEARTBEAT, 1e3);  // heartbeat every 1 second
   jTimer.setInterval(this, ACT_MEASURE, 10e3);   // every 10 seconds. Save the returned timer for reset the time interval
@@ -84,7 +89,7 @@ void EspClient::_initSensors()
     {
       String mqtt_pub_sensor = cfg.module + "/sensor/" + name;
       pSensor->setMqtt(&mqttClient, mqtt_pub_sensor.c_str(), 0, false);
-      Serial.print(("Sensor init: ")); Serial.println(name);
+      Serial.print(F("Sensor init: ")); Serial.println(name);
     }else
     {
       Serial.print(F("Invalide sensor type: "));
@@ -117,11 +122,6 @@ void EspClient::_connectToWifi()
     #error Platform not supported
   #endif
 
-  // Wnable WiFi station mode <= this is done in _setupWiFi()
-  // WiFiMode_t mode = WiFi.getMode();
-  // if(mode == WIFI_OFF) WiFi.mode(WIFI_STA);
-  // else if(mode == WIFI_AP) WiFi.mode(WIFI_AP_STA);
-    
   // check if static ip address configured (non-empty)
   if(cfg.ip != "")
   {
@@ -151,8 +151,7 @@ void EspClient::_connectToWifi()
   {
     #ifdef _DEBUG
       Serial.println(F("WIFI_OFF = 0, WIFI_STA = 1, WIFI_AP = 2, WIFI_AP_STA = 3"));
-      Serial.print(F("WiFi mode: "));
-      Serial.println(WiFi.getMode());
+      Serial.print(F("WiFi mode: ")); Serial.println(WiFi.getMode());
       Serial.println();
 
     // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
@@ -193,14 +192,23 @@ void EspClient::_setupWifi()
     Serial.println("_setupWifi()");
   #endif
 
-  // Set WiFi to station mode
-  WiFi.mode(WIFI_STA);
+  // Enable WiFi station mode
+  WiFiMode_t mode = WiFi.getMode();
+  if(mode == WIFI_OFF) WiFi.mode(WIFI_STA);
+  else if(mode == WIFI_AP) WiFi.mode(WIFI_AP_STA);
+
+  // Sometime, the ESP8266 connect takes forever, the following enable 8.11g only
+  // seems solved the issue (might be only ESP32 ONLY?)
+#ifdef ESP8266
+  WiFi.setPhyMode(WIFI_PHY_MODE_11G); // <== THIS seems solving the problem!
+#endif
 
   // Disconnect from an AP if it was previously connected
-  WiFi.disconnect();
-  delay(100);
+  // WiFi.disconnect();
+  // delay(100);
 
-  // Set up WiFi even handler. NOTE:
+  //--- Set up WiFi even handler --
+  // NOTE:
   // 1. Must save the handler returned, otherwise it will be auto deleted and won't catch up any events
   //    see https://github.com/esp8266/Arduino/issues/2545
   // 2. For labmda function, check diff between [&], [=], [this]
@@ -230,6 +238,9 @@ void EspClient::_setupWifi()
       {
         _wifiConnected = true;
 
+        // sync NTP
+        jTimer.setInterval(this, ACT_CMD_SYNC_NTP, 1e3);
+
         // reconnect MQTT
         jTimer.setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
 
@@ -237,7 +248,7 @@ void EspClient::_setupWifi()
           Serial.println("MQTT: Set reconnect timmer");
         #endif
 
-        _stopAP();
+        _stopAP(); // The mode will be changed back to to WFIF_STA
       }
     }
 #ifdef ESP8266
@@ -289,7 +300,7 @@ void EspClient::_setupMQTT()
       _mqttConnected = true;
 
       // disable the reconnect timer
-      jTimer.getTimer(ACT_MQTT_RECONNECT)->enabled = false;
+      jTimer.getTimer(ACT_MQTT_RECONNECT)->enable = false;
 
       _printLine();
       Serial.println(F("MQTT: Connected"));
@@ -413,7 +424,7 @@ void EspClient::_setupOTA()
   ArduinoOTA.setHostname(cfg.module.c_str());
 
   // No authentication by default
-  Serial.print("otaPass:"); Serial.println(cfg.otaPass.c_str());
+  // Serial.print("otaPass:"); Serial.println(cfg.otaPass.c_str());
   ArduinoOTA.setPassword(cfg.otaPass.c_str());
 
   // Password can be set with it's md5 value as well
@@ -495,7 +506,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
     jTimer.setTimer(this, ACT_CMD_RESTART, 100);
   });
-  
+
   _webServer.on(PSTR("/api/files/list"), HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("Got list");
 
@@ -504,7 +515,23 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     JsonArray jsFiles = jsonBuffer.createNestedArray("files");
  
     //get file listing on root folder (Can be extended to subfolders too)
-    File root = LittleFS.open("/");
+#ifdef ESP8266
+    Dir dir = LittleFS.openDir("");
+    while (dir.next())
+    {
+      JsonObject jsFile = jsFiles.createNestedObject();
+      jsFile["name"] = dir.fileName();
+      jsFile["size"] = dir.fileSize();
+      // files.add(dir.fileName()); //.substring(1));
+    }
+
+    //get used and total data
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    jsonBuffer["used"] = fs_info.usedBytes;
+    jsonBuffer["max"] = fs_info.totalBytes;
+#elif defined(ESP32)    
+    File root = LittleFS.open("/", "r");
     if(root && root.isDirectory())
     {
       File file = root.openNextFile();
@@ -522,13 +549,11 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
       }
     }
 
-    //get used and total data
-    // FSInfo fs_info;
-    // LittleFS.info(fs_info);
-    // jsonBuffer["used"] = fs_info.usedBytes;
-    // jsonBuffer["max"] = fs_info.totalBytes;
-    jsonBuffer["used"] = 10;
-    jsonBuffer["max"] = 1000;
+    // ESP32 FS does not have interface defined to get FSInfo!!
+    jsonBuffer["used"] = 1;
+    jsonBuffer["max"] = 1;
+#endif
+
     serializeJson(jsonBuffer, JSON);
     Serial.println(JSON);
     request->send(200, PSTR("text/html"), JSON);
@@ -660,24 +685,28 @@ void EspClient::_startAP()
   int n = snprintf(ssid, sizeof(ssid), "ESP-%s-%zu", cfg.module.c_str(), chipID);
   if(n == sizeof(ssid)) Serial.println("ssid might be trunckated!");
 
-  // Enable WiFi AP mode  <= This is done in _setupWiFi()
+  // Enable WiFi AP mode  <= This is automatically done in WiFi.softAP() call. So no need the following
   // WiFiMode_t mode = WiFi.getMode();
   // if(mode == WIFI_OFF) WiFi.mode(WIFI_AP);
   // else if(mode == WIFI_STA) WiFi.mode(WIFI_AP_STA);
-  // WiFi.mode(WIFI_AP_STA);
-
-  _printLine();
-  Serial.printf("AP on: "); Serial.println(ssid);
-  _printLine();
 
   // NOTE: WiFi.softAP call will change WiFi mode to WIFI_AP_STA
   // Serial.printf("startAP WiFi mode0: %d\n", WiFi.getMode());
   WiFi.softAP(ssid, cfg.apPass.c_str()); // wpa2 requires an (exact) 8 character password.
   // Serial.printf("startAP WiFi mode1: %d\n", WiFi.getMode());
+
+  _printLine();
+  Serial.print(F("AP on: ")); Serial.println(ssid);
+  Serial.printf("WiFi mode: %d\n", WiFi.getMode());
+  _printLine();
 }
 
 void EspClient::_stopAP()
 {
+#ifdef _DEBUG
+  Serial.println("_stopAP()");
+#endif
+
   if(WiFi.getMode() == WIFI_STA) return;
 
   // NOTE: WiFi.softAPdisconnect call will change WiFi mode back to WIFI_STA
@@ -686,7 +715,8 @@ void EspClient::_stopAP()
   // Serial.printf("stopAP WiFi mode1: %d\n", WiFi.getMode());
 
   _printLine();
-  Serial.printf("AP off");
+  Serial.println(F("AP off"));
+  Serial.print("Wifi mode: "); Serial.println(WiFi.getMode());
   _printLine();
 }
 
@@ -709,6 +739,25 @@ void EspClient::timerCallback(Timer& timer)
 
         if (_autoMode) _measure();
         break;
+
+      case ACT_CMD_SYNC_NTP:
+        {
+          #ifdef _DEBUG
+            Serial.println(F("TIMER: ACT_CMD_SYNC_NTP"));
+          #endif
+
+          // when not synched, the returned "now" is just sequence number
+          time_t now = time(nullptr);
+          if(now > 1617460172) // minimum valid epoch
+          {
+            timer.enable = false; // disable the sync timer
+
+            _printLine();
+            Serial.print(F("NTP Synched: ")); Serial.print(ctime(&now));
+            _printLine();
+          }
+          break;
+        }
 
       case ACT_CMD_RESTART:
         _restart();
@@ -941,34 +990,34 @@ void EspClient::_restart(RsCode code)
 // https://iotespresso.com/esp32-captive-portal-fetching-html-using-littlefs/
 // List contents of file system
 // Usage: listDir(LITTLEFS, "/", 0);
-void EspClient::_listDir(fs::FS &fs, const char * dirname, uint8_t levels)
-{
-    // Serial.printf("Listing directory: %s\r\n", dirname);
+// void EspClient::_listDir(fs::FS &fs, const char * dirname, uint8_t levels)
+// {
+//     // Serial.printf("Listing directory: %s\r\n", dirname);
 
-    File root = fs.open(dirname);
-    if(!root){
-        Serial.println(F("Failed to open directory"));
-        return;
-    }
-    if(!root.isDirectory()){
-        Serial.println(F("Not a directory"));
-        return;
-    }
+//     File root = fs.open(dirname);
+//     if(!root){
+//         Serial.println(F("Failed to open directory"));
+//         return;
+//     }
+//     if(!root.isDirectory()){
+//         Serial.println(F("Not a directory"));
+//         return;
+//     }
 
-    File file = root.openNextFile();
-    while(file){
-        if(file.isDirectory()){
-            // Serial.print("  DIR : ");
-            // Serial.println(file.name());
-            if(levels){
-                _listDir(fs, file.name(), levels -1);
-            }
-        } else {
-            // Serial.print("  FILE: ");
-            Serial.print(file.name());
-            // Serial.print("\tSIZE: ");
-            Serial.println(file.size());
-        }
-        file = root.openNextFile();
-    }
-}
+//     File file = root.openNextFile();
+//     while(file){
+//         if(file.isDirectory()){
+//             // Serial.print("  DIR : ");
+//             // Serial.println(file.name());
+//             if(levels){
+//                 _listDir(fs, file.name(), levels -1);
+//             }
+//         } else {
+//             // Serial.print("  FILE: ");
+//             Serial.print(file.name());
+//             // Serial.print("\tSIZE: ");
+//             Serial.println(file.size());
+//         }
+//         file = root.openNextFile();
+//     }
+// }
