@@ -751,6 +751,7 @@ void EspClient::timerCallback(Timer& timer)
           if(now > 1617460172) // minimum valid epoch
           {
             timer.enable = false; // disable the sync timer
+            _NtpSynched = true;
 
             _printLine();
             Serial.print(F("NTP Synched: ")); Serial.print(ctime(&now));
@@ -778,8 +779,7 @@ void EspClient::timerCallback(Timer& timer)
         #ifdef _DEBUG
           Serial.println(F("TIMER: ACT_MQTT_RECONNECT"));
           if(_mqttConnected) Serial.println(F("MQTT connected already"));
-          Serial.println(F("Repetitions: "));
-          Serial.println(repetitions);
+          Serial.print(F("Repetitions: ")); Serial.println(repetitions);
         #endif
         
         if(repetitions > 1)

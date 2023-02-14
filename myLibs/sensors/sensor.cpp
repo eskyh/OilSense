@@ -87,9 +87,6 @@ void Sensor::sendMeasure()
 	// do not do anything if disabled or not connected to network
 	if(!_enabled || _pMqttClient == NULL || !_pMqttClient->connected()) return;
 
-  // format the payload. Avoid using String!!
-  // _timestamp = time(NULL); // get current timestamp (in sec), convert it to millisec below
-  
   // Accuracy only to 1mm. so output to 1 decimal place.
   if(!measure())
   {
@@ -109,6 +106,9 @@ void Sensor::sendMeasure()
 bool Sensor::measure() 
 {
 	if(!_enabled || !_read()) return false;
+
+  // format the payload. Avoid using String!!
+  _timestamp = time(NULL); // get current timestamp (in sec)
 
   for(int i=0; i<_nMeasures; i++)
   {

@@ -89,7 +89,7 @@ class EspClient : public IJTimerListener
 
     AsyncMqttClient mqttClient;
 
-    inline bool isConnected() const { return _wifiConnected && _mqttConnected; }; // Return true if everything is connected
+    inline bool isConnected() const { return _wifiConnected && _mqttConnected && _NtpSynched; }; // Return true if everything is connected
 
     // Portal    
     void setupPortal(bool blocking=false);
@@ -129,6 +129,8 @@ class EspClient : public IJTimerListener
     // unsigned int _failedMQTTConnectionAttemptCount;
 
   private:
+    bool _NtpSynched = false;
+
     // Config ortal related
     bool _portalOn = false;         // indicate if configuration portal is on
     bool _portalSubmitted = false;  // The configuration form submitted
@@ -139,6 +141,7 @@ class EspClient : public IJTimerListener
     // WiFi related
     bool _wifiConnected = false;
     void _setupWifi();
+    void _connectToWifi();
 
     void _startAP();
     void _stopAP();
@@ -146,16 +149,13 @@ class EspClient : public IJTimerListener
     // MQTT related
     bool _mqttConnected = false;
     void _setupMQTT();
-
-    // OTA related
-    
-    void _setupOTA();
-
-    void _connectToWifi();
     void _connectToMqttBroker();
   #ifdef _DEBUG
     void _printMqttDisconnectReason(AsyncMqttClientDisconnectReason reason);
   #endif
+
+    // OTA related 
+    void _setupOTA();
 
     void _cmdHandler(const char* topic, const char* payload);
 

@@ -20,7 +20,7 @@ char* VL53L0X::getPayload()
   // snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"distance\":%.1f}",
   //   _timestamp*1000, _measures[0]);
 
-  snprintf(payload, sizeof(payload), "{\"distance\":%.1f}", _measures[0]);
+  snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"distance\":%.1f}", _timestamp, _measures[0]);
   return payload;
 }
 

@@ -37,7 +37,6 @@ class Sensor
     bool _retain = false; // mqtt retain
 		
 		time_t _timestamp; 		// timestamp of the current measure
-    // char _payload[120]; 	// string buffer for SR04 sensor message
 
 		// Measurements
     virtual bool _read() = 0; // overload this function to read sensor values
