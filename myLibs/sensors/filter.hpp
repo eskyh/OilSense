@@ -13,8 +13,8 @@ enum FilterType {
 class Filter
 {
   public:
-	Filter() {};
-	virtual ~Filter() {};
+	  Filter() {};
+	  virtual ~Filter() {};
 
     virtual float state(double measure)=0; // abstract function, measure is the new sensor data, return the evaluated new state.
 };
@@ -22,14 +22,14 @@ class Filter
 class MedianFilter: public Filter
 {
   public:
-	MedianFilter() {};
-	virtual ~MedianFilter() {};
+    MedianFilter() {};
+    virtual ~MedianFilter() {};
 
     virtual float state(double measure);
 
   private:
-	float _last = 0; // record the last median value
-	bool _full = false; // mark if the buffer is fullfilled to calculate the median
+    float _last = 0; // record the last median value
+    bool _full = false; // mark if the buffer is fullfilled to calculate the median
 
     float _lastReadings[5] = {0}; // an array of recent 5 measures
     // The _index (0-4) of the current measure saved in the in the cyclic buffer _lastReadings
@@ -42,14 +42,14 @@ class MedianFilter: public Filter
 class KalmenFilter: public Filter
 {
   public:
-	KalmenFilter() {};
-	virtual ~KalmenFilter() {};
+    KalmenFilter() {};
+    virtual ~KalmenFilter() {};
 
     virtual float state(double measure);
   
   private:
-  // Kalman filter parameters
-   
+    // Kalman filter parameters
+    
     //  const double F = 1.0; // true state coeff
     //  const couble B = 0.0; // there is no control input
     const double H = 1.0; // measurement coeff
@@ -65,8 +65,8 @@ class KalmenFilter: public Filter
 class EWMAFilter: public Filter
 {
   public:
-	EWMAFilter() {};
-	virtual ~EWMAFilter() {};
+    EWMAFilter() {};
+    virtual ~EWMAFilter() {};
 
     virtual float state(double measure);
 

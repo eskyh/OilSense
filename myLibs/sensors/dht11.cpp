@@ -11,15 +11,34 @@ DH11::DH11(const char* name, uint8_t dhtPin)
 char* DH11::getPayload()
 {
 	static char payload[100];
+  char tmp[30];
 	// snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f,\"heatindex\":%.1f}",
 	// 	_timestamp*1000,
 	// 	_measures[0],
 	// 	_measures[1],
 	// 	_measures[4]);
-	snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f}",
-    _timestamp,
-		_measures[0],
-		_measures[1]);
+
+  if(!_bands[0]->status && !_bands[1]->status) return NULL;
+
+	// snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f}",
+  //   _timestamp,
+	// 	_measures[0],
+	// 	_measures[1]);
+
+	snprintf(payload, sizeof(payload), "{\"timestamp\":%lld", _timestamp);
+  
+  if(_bands[0]->status)
+  {
+    snprintf(tmp, sizeof(tmp), ",\"humidity\":%.1f", _measures[0]);
+    strcat(payload, tmp);
+  }
+
+  if(_bands[1]->status)
+  {
+    snprintf(tmp, sizeof(tmp), ",\"temperature\":%.1f}", _measures[1]);
+    strcat(payload, tmp);
+  }
+
   return payload;
 }
 
