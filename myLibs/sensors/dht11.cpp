@@ -2,7 +2,7 @@
 
 // dhtPin: Digital pin connected to the DHT sensor
 DH11::DH11(const char* name, uint8_t dhtPin)
-	 : Sensor(name, 5, None), _dht(dhtPin, DHT11)
+	 : Sensor(name, 5, FT_None), _dht(dhtPin, DHT11)
 {
   _dht.begin();
 }

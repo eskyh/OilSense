@@ -14,7 +14,7 @@ class Sensor
   public:
 		Sensor(const char* sensorName, int nMeasures,
     			 FilterType filter=Median,
-					 BandType band=None, uint16_t gap=0, bool pct=false);
+					 BandType band=BT_None, uint16_t gap=0, bool pct=false);
 
     void enable(bool enable) {_enabled = enable;};
     bool isEnabled() {return _enabled;};
@@ -24,8 +24,8 @@ class Sensor
     void setFilter(FilterType type); // set all filters to the same type
     void setFilter(int index, FilterType type); // set specific filter
 
-    void setBand(BandType type, uint16_t gap, bool pct)); // set all bands to the same type
-    void setBand(int index, BandType type, uint16_t gap, bool pct)); // set specific band
+    void setBand(BandType type, uint16_t gap, bool pct); // set all bands to the same type
+    void setBand(int index, BandType type, uint16_t gap, bool pct); // set specific band
 
     void setMqtt(AsyncMqttClient *pClient, const char* topic, int qos=0, bool retain=false);
     void sendMeasure();

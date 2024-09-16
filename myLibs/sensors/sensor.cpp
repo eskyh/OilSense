@@ -61,7 +61,7 @@ void Sensor::setFilter(int index, FilterType type)
 
 	switch (type)
 	{
-		case None:
+		case FT_None:
 			_filters[index] = NULL;
 			break;
 		case Median:

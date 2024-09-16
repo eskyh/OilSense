@@ -1,7 +1,7 @@
 #pragma once
 
 enum FilterType {
-	None=0,
+	FT_None=0,
 	Median=1,
 	Kalmen=2,
 	EWMA=3
