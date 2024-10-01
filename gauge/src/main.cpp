@@ -1,21 +1,29 @@
 #include <Arduino.h>
 #include "EspClient.hpp"
 
-// Singleton EspClient instance
+// Create a singleton instance of EspClient.
 EspClient &espClient = EspClient::instance();
 
 void setup()
 {
-  //-- Initialize Pins and Serial speed
-  pinMode(LED_BUILTIN, OUTPUT);    // Initialize digital pin LED_BUILTIN as an output (used as ESP heartbeat indicator).
-  digitalWrite(LED_BUILTIN, HIGH); // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)
-  Serial.begin(115200);            // Serial Communication baudrate: 9600, 115200, 250000
+  //-- Initialize MCU Pins and Serial speed
 
-  //-- setup the singleton EspClient instance
+  // Initialize digital pin LED_BUILTIN as an output (used as ESP heartbeat indicator).
+  pinMode(LED_BUILTIN, OUTPUT);
+  // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)    
+  digitalWrite(LED_BUILTIN, HIGH); 
+
+  //-- Serial Communication baudrate options: 9600, 115200, 250000
+  Serial.begin(115200);            
+
+  //-- EspClient config and connection establishment:
+  //   WiFi, MQTT, OTA, Init Sensors, etc.
   espClient.setup();
 }
 
 void loop()
 {
-  espClient.loop(); // task handling
+  //-- Run EspClient tasks:
+  // sensor measurement and publishing, mini web server, and other related tasks.
+  espClient.loop();
 }
