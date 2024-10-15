@@ -25,7 +25,7 @@
 	<script src="https://code.highcharts.com/modules/exporting.js"></script> <!-- include this to show the chart export menu -->
 	<!-- <script src="jquery-csv.js"></script> -->
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-	<script type="text/javascript" src="./jquery.csv.min.js"></script>
+	<script type="text/javascript" src="js/jquery.csv.min.js"></script>
 	
 	<script>
 	// https://stackoverflow.com/questions/2376745/does-html5-allow-you-to-interact-with-local-client-files-from-within-a-browser
@@ -189,10 +189,29 @@
 		
 		// for csv with multiple series, create multiple series(2D array)
 		// each serie is element of ss
-		data.slice(1).forEach((row) => {
-			row.slice(1).forEach((el, i) => {
-				ss[i].push([row[0], el]);
-			});
+		data.slice(1).forEach((row,k) => {
+			if(	row[0] != null && (typeof row[0] === 'number') && row[0].toString().length == 13 )
+			{
+				row.slice(1).some((el, i) => {
+					if(i > header.length-2) // sometime a row includes more column than necessary!!
+					{
+						console.log("row:" + k + ", extra columns! ");
+						return true; 
+					}
+					
+					if( el != null && (typeof el === 'number') )
+					{
+						// print the row number which has large numbers (outlier)!
+						if(el>500) 	console.log("row:" + k + ", " + el);
+						
+						// Remove the jumps greater 50! This could generate proglems!!
+						if(ss[i].length == 0)
+							ss[i].push([row[0], el]);
+						else if(Math.abs(el - ss[i][ss[i].length-1][1]) < 50)
+							ss[i].push([row[0], el]);
+					}
+				});
+			}
 		});
 			
 		var srs = Array(header.length-1);
