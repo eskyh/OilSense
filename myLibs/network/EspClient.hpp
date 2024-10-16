@@ -73,104 +73,104 @@ instance to enable the callback when the timer is triggered.
 */
 class EspClient : public IJTimerListener
 {
-  // Singleton design (e.g., private constructor)
+    // Singleton design (e.g., private constructor)
 public:
-  static EspClient &instance();
-  ~EspClient() {};
+    static EspClient &instance();
+    ~EspClient() {};
 
-  AsyncMqttClient mqttClient;
+    AsyncMqttClient mqttClient;
 
-  inline bool isConnected() const { return _wifiConnected && _mqttConnected && _NtpSynched; }; // Return true if everything is connected
+    inline bool isConnected() const { return _wifiConnected && _mqttConnected && _NtpSynched; }; // Return true if everything is connected
 
-  // Portal
-  void setupPortal(bool blocking = false);
+    // Portal
+    void setupPortal(bool blocking = false);
 
-  void setup(); // Config and connection establishment: WiFi, MQTT, OTA, Init Sensors, etc.
-  void loop();  // Run EspClient tasks: sensor measurement and publishing, web portal handling, actuator MQTT commands, and Wi-Fi/MQTT reconnections.
+    void setup(); // Config and connection establishment: WiFi, MQTT, OTA, Init Sensors, etc.
+    void loop();  // Run EspClient tasks: sensor measurement and publishing, web portal handling, actuator MQTT commands, and Wi-Fi/MQTT reconnections.
 
-  virtual void timerCallback(Timer &timer);
+    virtual void timerCallback(Timer &timer);
 
 protected:
 private:
-  // Singleton desing pattern required
-  // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return
-  EspClient() {};
-  EspClient(const EspClient &) = delete;            // deleting copy constructor.
-  EspClient &operator=(const EspClient &) = delete; // deleting copy operator.
+    // Singleton desing pattern required
+    // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return
+    EspClient() {};
+    EspClient(const EspClient &) = delete;            // deleting copy constructor.
+    EspClient &operator=(const EspClient &) = delete; // deleting copy operator.
 
-  // Restart code
-  enum RsCode
-  {
-    RS_NORMAL,
-    RS_WIFI_DISCONNECT,
-    RS_MQTT_DISCONNECT,
-    RS_DISCONNECT,
-    RS_CFG_CHANGE
-  };
+    // Restart code
+    enum RsCode
+    {
+        RS_NORMAL,
+        RS_WIFI_DISCONNECT,
+        RS_MQTT_DISCONNECT,
+        RS_DISCONNECT,
+        RS_CFG_CHANGE
+    };
 
-  void _restart(RsCode code = RS_NORMAL); // restart the device
+    void _restart(RsCode code = RS_NORMAL); // restart the device
 
 private:
-  bool _NtpSynched = false;
+    bool _NtpSynched = false;
 
-  // Web portal related
-  bool _portalOn = false;        // indicate if configuration portal is on
-  bool _portalSubmitted = false; // The configuration form submitted
-  char _portalReason[50];        // reason of open portal (Not used at this moment.)
+    // Web portal related
+    bool _portalOn = false;        // indicate if configuration portal is on
+    bool _portalSubmitted = false; // The configuration form submitted
+    char _portalReason[50];        // reason of open portal (Not used at this moment.)
 
-  AsyncWebServer _webServer = AsyncWebServer(80); // Mini web server object
+    AsyncWebServer _webServer = AsyncWebServer(80); // Mini web server object
 
-  // WiFi related
-  bool _wifiConnected = false;
-  void _setupWifi();
-  void _connectToWifi();
+    // WiFi related
+    bool _wifiConnected = false;
+    void _setupWifi();
+    void _connectToWifi();
 
-  void _startAP();
-  void _stopAP();
+    void _startAP();
+    void _stopAP();
 
-  // MQTT related
-  bool _mqttConnected = false;
-  void _setupMQTT();
-  void _connectToMqttBroker();
+    // MQTT related
+    bool _mqttConnected = false;
+    void _setupMQTT();
+    void _connectToMqttBroker();
 #ifdef _DEBUG
-  void _printMqttDisconnectReason(AsyncMqttClientDisconnectReason reason);
+    void _printMqttDisconnectReason(AsyncMqttClientDisconnectReason reason);
 #endif
 
-  // OTA related
-  void _setupOTA();
-  void _cmdHandler(const char *topic, const char *payload);
+    // OTA related
+    void _setupOTA();
+    void _cmdHandler(const char *topic, const char *payload);
 
-  // Timer action IDs
-  enum
-  {
-    ACT_HEARTBEAT, // heartbeat
-    ACT_MEASURE,   // sensor measure timer
+    // Timer action IDs
+    enum
+    {
+        ACT_HEARTBEAT, // heartbeat
+        ACT_MEASURE,   // sensor measure timer
 
-    ACT_MQTT_RECONNECT, // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
+        ACT_MQTT_RECONNECT, // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
 
-    //-- One-off timers
-    ACT_MQTT_SUBSCRIBE, // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
-    // ACT_CMD_RESET_WIFI,
-    ACT_CMD_SYNC_NTP, // synch internet time
-    ACT_CMD_RESTART,  // restart
-    ACT_CMD_MEASURE   // manual measure timer
-  };
+        //-- One-off timers
+        ACT_MQTT_SUBSCRIBE, // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
+        // ACT_CMD_RESET_WIFI,
+        ACT_CMD_SYNC_NTP, // synch internet time
+        ACT_CMD_RESTART,  // restart
+        ACT_CMD_MEASURE   // manual measure timer
+    };
 
-  // Sensors
-  bool _ledBlink = true;
-  bool _autoMode = true;
-  std::vector<Sensor *> _sensors;
+    // Sensors
+    bool _ledBlink = true;
+    bool _autoMode = true;
+    std::vector<Sensor *> _sensors;
 
-  void _initSensors();
-  void _enableSensor(const char *name, bool enable);
-  void _measure();
-  void _blink();
+    void _initSensors();
+    void _enableSensor(const char *name, bool enable);
+    void _measure();
+    void _blink();
 
-  // Helper function for debug info
-  void _printLine()
-  {
+    // Helper function for debug info
+    void _printLine()
+    {
 #ifdef _DEBUG
-    Serial.println(F("----------------------------------------------"));
+        Serial.println(F("----------------------------------------------"));
 #endif
-  }
+    }
 };
