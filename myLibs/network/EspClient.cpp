@@ -39,22 +39,22 @@ void EspClient::setup()
   }
 
   _setupWifi();
-  _setupOTA(); // only set up OTA when got IP?
+  _setupOTA();
   _setupMQTT();
   
   _connectToWifi();
 
   _initSensors();
 
-  //-- set time zone
-  // Timer is created in the event handling of Wifi gets connected
+  //-- Set time zone
+  // Action Timer is created to do synch NTP server when WiFi gets connected
   // https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
   const char* TZstr = "EST+5EDT,M3.2.0/2,M11.1.0/2"; //"PKT-5";
   configTime(TZstr, "pool.ntp.org");  
 
-  //-- Create timers
-  jTimer.setInterval(this, ACT_HEARTBEAT, 1e3);  // heartbeat every 1 second
-  jTimer.setInterval(this, ACT_MEASURE, 10e3);   // every 10 seconds. Save the returned timer for reset the time interval
+  //-- Create heartbeat and auto measurement timers
+  jTimer.setInterval(this, ACT_HEARTBEAT, 1e3);  // Send heartbeat signal (every 1 sec) to MQTT broker
+  jTimer.setInterval(this, ACT_MEASURE, 2e3);   // Measure every 2 seconds
 }
 
 void EspClient::_initSensors()
@@ -105,10 +105,7 @@ void EspClient::loop()
   // let JTimer do it's magic every time loop() is executed
   jTimer.run();
 
-  // if(_wifiConnected) 
-  ArduinoOTA.handle(); // OTA does not need wifi connected (AP also fine)
-
-  delay(1);
+  ArduinoOTA.handle(); // Listen for and handle OTA firmware upload requests.
 }
 
 // Initiate a Wifi connection
@@ -233,15 +230,14 @@ void EspClient::_setupWifi()
       Serial.println(WiFi.localIP().toString().c_str());
       _printLine();
 
-      //TODO: check if the IP is valide!!! e.g., not 192.168.x.x
       if(!_wifiConnected) // just got disconnected
       {
         _wifiConnected = true;
 
-        // sync NTP
+        // Set NTP sync action timer (to be executed in main loop() function)
         jTimer.setInterval(this, ACT_CMD_SYNC_NTP, 1e3);
 
-        // reconnect MQTT
+        // Set MQTT reconnect action timer
         jTimer.setTimer(this, ACT_MQTT_RECONNECT, MQTT_RECONNECT_INTERVAL, MQTT_MAX_TRY);
 
         #ifdef _DEBUG
@@ -261,8 +257,6 @@ void EspClient::_setupWifi()
   static WiFiEventHandler DISCONNECT_HANDLER = WiFi.onStationModeDisconnected(
     [&](const WiFiEventStationModeDisconnected& event)
 #elif defined(ESP32)
-  // WiFi::onEvent is expecting an arduino event, not ESP-IDF system event.
-  // See the options here: https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiGeneric.h#L36-L78
   WiFi.onEvent([&](WiFiEvent_t event, WiFiEventInfo_t info)
 #endif
   {
@@ -289,17 +283,17 @@ void EspClient::_setupMQTT()
     Serial.println("_setupMQTT()");
   #endif
 
-  // set the event callback functions
+  //-- Set MQTT broker "connected" event listener/callback functions
   mqttClient.onConnect([&](bool sessionPresent) {
     if(!_mqttConnected) // just got connected
     {
-      // set delay timmer to subscribe command topic
+      // set delay action timmer to subscribe command topic
       jTimer.setTimer(this, ACT_MQTT_SUBSCRIBE, MQTT_SUBSCRIBE_DELAY);
 
       // set the flag at the end to make sure there is no other hareware interrup action casusing exception!!
       _mqttConnected = true;
 
-      // disable the reconnect timer
+      // disable the reconnect timer as it's been connected
       jTimer.getTimer(ACT_MQTT_RECONNECT)->enable = false;
 
       _printLine();
@@ -308,6 +302,7 @@ void EspClient::_setupMQTT()
     }
   });
 
+  //-- Set MQTT broker "disconnect" event listener/callback function
   mqttClient.onDisconnect([&](AsyncMqttClientDisconnectReason reason) {
     // reconnect MQTT, check if it is on to avoid recreate timer
     // if(!_mqttReconnectOn)
@@ -328,12 +323,14 @@ void EspClient::_setupMQTT()
     }
   });
 
+  //-- Set MQTT broker "subscrib" event listener/callback function
   mqttClient.onSubscribe([&](uint16_t packetId, uint8_t qos) {
     #ifdef _DEBUG
       Serial.printf("Subscribe acknowledged. PacketId: %d, qos: %d\n", packetId, qos);
     #endif
   });
 
+ //-- Set MQTT broker "unsubscribe" event listener/callback function
   mqttClient.onUnsubscribe([&](uint16_t packetId) {
     #ifdef _DEBUG
       Serial.print(F("Unsubscribe acknowledged. PacketId: "));
@@ -341,6 +338,7 @@ void EspClient::_setupMQTT()
     #endif
   });
 
+  //-- Set MQTT broker "publish" event listener/callback function
   mqttClient.onPublish([&](uint16_t packetId) {
     #ifdef _DEBUG
       Serial.print(F("Publish acknowledged. packetId: "));
@@ -348,6 +346,7 @@ void EspClient::_setupMQTT()
     #endif
   });
 
+  //-- Set MQTT broker message received event listener/callback function
   mqttClient.onMessage([&](char* topic, char* payload,
     AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
 
@@ -365,8 +364,6 @@ void EspClient::_setupMQTT()
 
     // NOTE: onMessage callback is hadware interuption triggered, if the _cmdHandler is not done yet, can cause
     // buffer mess and crash!! so do not do heavy work in _cmdHandler!!
-
-    // Reason to make a copy: https://github.com/marvinroger/async-mqtt-client/issues/42
     static char buffer[20]; // Command payload is usually short, 20 is enough.
     // copies at most size-1 non-null characters from src to dest and adds a null terminator
     snprintf(buffer, min(len+1, (size_t)sizeof(buffer)), "%s", payload);
@@ -375,7 +372,7 @@ void EspClient::_setupMQTT()
     _cmdHandler(&(topic[size]), buffer);
   });
 
-  // set MQTT server
+  // set MQTT broker
   mqttClient.setServer(cfg.mqttServer.c_str(), cfg.mqttPort);
   
   // If your broker requires authentication (username and password), set them below
@@ -408,8 +405,7 @@ void EspClient::_printMqttDisconnectReason(AsyncMqttClientDisconnectReason reaso
 #endif
 
 // This is called in WiFi connected callback set in _setupWifi()
-// NOTE: 1. Must do this after Wifi got IP address. Otherwise, won't work!
-//       2. OTA is using mDNS, so no need to set mDNS specifically
+// NOTE: OTA is using mDNS, so no need to set mDNS specifically
 void EspClient::_setupOTA()
 {
   #ifdef _DEBUG
@@ -420,16 +416,12 @@ void EspClient::_setupOTA()
   // ArduinoOTA.setPort(8266);
 
   // Hostname defaults to esp8266-[ChipID]
-  Serial.print("otaName:"); Serial.println(cfg.module.c_str());
+  // Serial.print("otaName:"); Serial.println(cfg.module.c_str());
   ArduinoOTA.setHostname(cfg.module.c_str());
 
   // No authentication by default
   // Serial.print("otaPass:"); Serial.println(cfg.otaPass.c_str());
   ArduinoOTA.setPassword(cfg.otaPass.c_str());
-
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
   ArduinoOTA.onStart([]() {
     String type;
@@ -473,9 +465,9 @@ void EspClient::_setupOTA()
   Serial.printf("OTA: %s @ %s\n", cfg.module.c_str(), WiFi.localIP().toString().c_str());
 }
 
-// This will start a webserver allowing user to configure all settings via web.
+// This will start a webserver allowing user to configure all settings via this web portal.
 // Two approach to access the webserver:
-//     1. Connect AP WiFi SSID (usually named "ESP-XXXX"). Browse 192.168.4.1 
+//     1. Connect AP WiFi SSID (usually named "ESP-XXXX"). Browse 192.168.4.1
 //        (Confirm the console prompt for the actual AP IP address). This
 //        approach is good even the module is disconnected from family Wifi router.
 //     2. Connect via Family network. Only works when the module is still connected
@@ -491,8 +483,9 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
   _portalSubmitted = false; // used when portal is in blocking mode. will be set to true when the configuration is done in _handleConfigPortal
 
   // -- setup web handlers ------------------------------
-  // Route for root / web page
-  // change the index.html.gz (gzipped) file name to index.html and uploadd to esp. This will work
+  
+  // Route for root / web portal page - index.html
+  // change the (gzipped) index.html.gz file name to index.html and upload it to ESP. This will work
   // on both chrome and Safari (.gz file name won't work on Safari!).
   _webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("Homepage request");
@@ -514,7 +507,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     StaticJsonDocument<1000> jsonBuffer;
     JsonArray jsFiles = jsonBuffer.createNestedArray("files");
  
-    //get file listing on root folder (Can be extended to subfolders too)
+    //get file listing on root folder (TODO: Can be extended to subfolders too)
 #ifdef ESP8266
     Dir dir = LittleFS.openDir("");
     while (dir.next())
@@ -559,6 +552,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     request->send(200, PSTR("text/html"), JSON);
   });
 
+  //-- Handle file upload request
   _webServer.on(PSTR("/api/files/upload"), HTTP_POST, [](AsyncWebServerRequest *request) {},
     [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
 
@@ -572,7 +566,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
         if (!filename.startsWith("/"))
             filename = "/" + filename;
 
-        // Delete existing file, otherwise it will appended to the file
+        // Delete existing file, otherwise it will be appended to the end of the existing file
         if(LittleFS.exists(filename)) LittleFS.remove(filename);
 
         fsUploadFile = LittleFS.open(filename, "w");
@@ -596,7 +590,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     }
   });
 
-  //remove file
+  //-- Handle removing file request
   _webServer.on(PSTR("/api/files/remove"), HTTP_POST, [](AsyncWebServerRequest *request) {
     if (request->hasParam("filename", true))
     {
@@ -611,19 +605,21 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
     }
   });
 
-  // send config.json per client request
-  _webServer.on("/api/config/get", HTTP_GET, [](AsyncWebServerRequest *request){
+  //-- Handle retrieval of the config.json requested by client browser (send it!)
+    _webServer.on("/api/config/get", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("Get config.");
     request->send(LittleFS, "/config.json", "text/plain");
   });
 
-  // NOTE: this on is using Json handler!! => AsyncCallbackJsonWebHandler
+  //-- Receiving the updated configuration Json file
+  // NOTE: It uses AsyncCallbackJsonWebHandler!!
   _webServer.addHandler(new AsyncCallbackJsonWebHandler("/api/config/set", [&](AsyncWebServerRequest *request, JsonVariant &json) {
     String buffer;
     serializeJsonPretty(json, buffer);
     Serial.println(buffer);
 
-    //TODO: validate the config json
+    // Configuration Json file has been validated in the web portal!
+    // It should be in general OK!
     DeserializationError error = deserializeJson(cfg.doc, buffer);
     if (error)
     {
@@ -645,7 +641,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
   if(!_wifiConnected) _startAP();
 
-  // Must start webserver after either Wifi or AP started or tcpip crash!!
+  // Must start webserver after either Wifi or AP started or it will cause TCPIP stack crash!!
   _webServer.begin(); // start web server
 
   _printLine();
@@ -656,7 +652,7 @@ void EspClient::setupPortal(bool blocking) //char const *apName, char const *apP
 
   if(blocking)
   {
-    // blocking mode, open untill configuration done!
+    // blocking mode, open untill configuration is done!
     Serial.println(F("Portal open on blocking mode."));
     while(_portalOn && !_portalSubmitted)
     {
@@ -674,8 +670,8 @@ void EspClient::_startAP()
 
   if(WiFi.getMode() == WIFI_AP_STA) return;
 
-  // construct ssid name
-  char ssid[40];    // this will be used as AP WiFi SSID
+  // construct default ssid name
+  char ssid[40];    // used to save AP WiFi SSID
   uint32_t chipID;
 #ifdef ESP8266
   chipID = ESP.getChipId();
@@ -746,11 +742,10 @@ void EspClient::timerCallback(Timer& timer)
             Serial.println(F("TIMER: ACT_CMD_SYNC_NTP"));
           #endif
 
-          // when not synched, the returned "now" is just sequence number
-          time_t now = time(nullptr);
+          time_t now = time(nullptr); // When NTP is not synched, the returned "now" is just a sequence number
           if(now > 1617460172) // minimum valid epoch
           {
-            timer.enable = false; // disable the sync timer
+            timer.enable = false; // disable the sync timer when it's been synched
             _NtpSynched = true;
 
             _printLine();
@@ -784,16 +779,17 @@ void EspClient::timerCallback(Timer& timer)
         
         if(repetitions > 1)
         {
-          // not reaching max number of reconnect try, continue if wifi is on but mqtt is not
+          // Not reaching the maximum number of reconnect attempts;
+          // continue if Wi-Fi is on but MQTT is not.
           if(_wifiConnected && !_mqttConnected) _connectToMqttBroker();
         }
         else
         {
-          // reach max try, create a longer timer if not connected which means
-          // mqtt will keep trying untill it is connected.
+          // Upon reaching the maximum number of attempts, create a longer timer if not connected,
+          // meaning MQTT will keep trying until it connects.
           if(!_mqttConnected)
           {
-            // Reset MQTT connect timer to longer interval if wifi is not connected, otherwise same interval
+            // Reset MQTT connect timer to longer interval if wifi is not connected, otherwise use the same interval
             jTimer.setTimer(this, ACT_MQTT_RECONNECT,
               _wifiConnected ? MQTT_RECONNECT_INTERVAL:MQTT_RECONNECT_INTERVAL_LONG, MQTT_MAX_TRY);
           }
@@ -806,7 +802,7 @@ void EspClient::timerCallback(Timer& timer)
           Serial.println(F("TIMER: ACT_MQTT_SUBSCRIBE"));
         #endif
 
-        // check mqtt connection before subscribe. Sometime it disconnect
+        // check mqtt connection before subscribe. MQTT broker disconnection can happen!
         if(_mqttConnected)
         {
           String module = String(cfg.module);
@@ -823,9 +819,9 @@ void EspClient::timerCallback(Timer& timer)
     }
 }
 
+// Blink the built-in LED light
 void EspClient::_blink()
 {
-  // blink the built-in LED light
   if(_ledBlink)
   {
     static bool led_on = true;
@@ -837,6 +833,7 @@ void EspClient::_blink()
   }
 }
 
+// Instruct all sensors to perform measurements.
 void EspClient::_measure()
 {
   for(Sensor * pSensor : _sensors)
@@ -846,9 +843,9 @@ void EspClient::_measure()
   }
 }
 
+// Enable/Disable sensor by name
 void EspClient::_enableSensor(const char* name, bool enable)
 {
-  // for(int i=0; i<MAX_SENSORS; i++)
   for(Sensor *pSensor : _sensors)
   {
     if(pSensor != NULL && strcmp(name, pSensor->name) == 0)
@@ -862,8 +859,9 @@ void EspClient::_enableSensor(const char* name, bool enable)
   }
 }
 
-// NOTE: this is called in MQTT onMessage() based on interrupt. Do not do heavy duty staff!
-// if you have to, set a ACT timer and do it overthere, e.g., 'CMD_MEASURE => ACT_MEASURE'
+// NOTE: this is called in MQTT onMessage() triggered by hardward interrupt routine.
+// So do not do heavy duty staff otherwise it can cause randome crash!!
+// If you have to, set a ACT timer and it will be executed in main loop(), e.g., 'CMD_MEASURE => ACT_MEASURE'
 void EspClient::_cmdHandler(const char* topic, const char* payload)
 {
   #ifdef _DEBUG
@@ -875,7 +873,6 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   {
     int filter = atoi(payload);
 
-    // for(int i=0; i<MAX_SENSORS; i++)
     for(Sensor * pSensor : _sensors)
     {
       if(pSensor != NULL) pSensor->setFilter((FilterType)filter);
@@ -893,7 +890,7 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   }
   else if(strcmp(topic, CMD_MEASURE) == 0)
   {
-    // measure may take longer time, leave the task to timer with one-time timer
+    // measure may take longer time, leave the task to action timer!
     jTimer.setTimer(this, ACT_CMD_MEASURE, 100);
   }
   else if(strcmp(topic, CMD_INTERVAL) == 0)
@@ -907,11 +904,6 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   {
     _restart();
   }
-  // else if(strcmp(topic, CMD_RESET_WIFI) == 0)
-  // {
-  //   _resetWifi();
-  //   _restart();
-  // }
   else if(strstr(topic, "/cmd/on/") != NULL)
   {
       // find he last occurrence of '/'
@@ -945,7 +937,7 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
         Serial.println(F("Deep..."));
       #endif
 
-      // After upload code, connect D0 and RST. NOTE: DO NOT connect the pins if using OTG uploading code!
+// After upload code, connect D0 and RST. NOTE: DO NOT connect the pins if using OTG uploading code!
 //      String msg = "I'm awake, but I'm going into deep sleep mode for 60 seconds";
 //      uint16_t packetIdPub = mqttClient.publish(MQTT_PUB_INFO, 1, false, msg.c_str());
 //      delay(1000);
@@ -961,6 +953,7 @@ void EspClient::_cmdHandler(const char* topic, const char* payload)
   }  
 }
 
+// Restart the ESP device
 void EspClient::_restart(RsCode code)
 {
   Serial.print(F("Restart device, code: "));
@@ -986,38 +979,3 @@ void EspClient::_restart(RsCode code)
       #error Platform not supported
   #endif
 }
-
-// https://iotespresso.com/esp32-captive-portal-fetching-html-using-littlefs/
-// List contents of file system
-// Usage: listDir(LITTLEFS, "/", 0);
-// void EspClient::_listDir(fs::FS &fs, const char * dirname, uint8_t levels)
-// {
-//     // Serial.printf("Listing directory: %s\r\n", dirname);
-
-//     File root = fs.open(dirname);
-//     if(!root){
-//         Serial.println(F("Failed to open directory"));
-//         return;
-//     }
-//     if(!root.isDirectory()){
-//         Serial.println(F("Not a directory"));
-//         return;
-//     }
-
-//     File file = root.openNextFile();
-//     while(file){
-//         if(file.isDirectory()){
-//             // Serial.print("  DIR : ");
-//             // Serial.println(file.name());
-//             if(levels){
-//                 _listDir(fs, file.name(), levels -1);
-//             }
-//         } else {
-//             // Serial.print("  FILE: ");
-//             Serial.print(file.name());
-//             // Serial.print("\tSIZE: ");
-//             Serial.println(file.size());
-//         }
-//         file = root.openNextFile();
-//     }
-// }

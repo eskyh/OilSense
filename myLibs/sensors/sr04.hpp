@@ -3,7 +3,7 @@
 #include "sensor.hpp"
 
 /*
- * Sonar readings with median noise filtering
+ * SR04 Ultrasonic distance sensor class
  */
 class SR04 : public Sensor
 {

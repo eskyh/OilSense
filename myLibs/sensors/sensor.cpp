@@ -3,8 +3,8 @@
 // name: sensor name
 // nMeasures: number of measures a sensor can generator (some sensor integrates multiple type of measures)
 Sensor::Sensor(const char* sensorName, int nMeasures,
-							 FilterType filter,
-							 BandType band, uint16_t gap, bool pct)
+				FilterType filter,
+				BandType band, uint16_t gap, bool pct)
 {
   // sizeof: Returns the length of the given byte string, include null terminator;
   // strlen: Returns the length of the given byte string not including null terminator;
@@ -119,6 +119,7 @@ void Sensor::setMqtt(AsyncMqttClient *pClient, const char* topic, int qos, bool 
   _retain = retain;
 }
 
+// Send MQTT measurement message to MQTT broker!
 void Sensor::sendMeasure()
 {
 	// do not do anything if disabled or not connected to network
@@ -141,17 +142,16 @@ void Sensor::sendMeasure()
   #endif
 }
 
-// return measure in cm
+// Perform measurement (unit: cm)
 bool Sensor::measure() 
 {
 	if(!_enabled || !_read()) return false;
 
-  // format the payload. Avoid using String!!
-  _timestamp = time(NULL); // get current timestamp (in sec)
+    _timestamp = time(NULL); // get current timestamp
 
   for(int i=0; i<_nMeasures; i++)
   {
-    // get filter value if filter is set
+    // Get the filtered value if a filter is set.
     if(_filters[i] != NULL)
       _measures[i] = _filters[i]->state(_measures[i]);
 

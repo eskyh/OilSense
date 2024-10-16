@@ -27,7 +27,7 @@
 // Known issu: ESP32 FS.h does not have interface to get used/max disk space!!
 
 //----------------------
-// MQTT command message topics
+// Actuator MQTT command message topics
 
 #define MQTT_SUB_CMD 	"/cmd/#"
 
@@ -59,7 +59,7 @@
 
 
 //---------------------------------------
-// Some timer default value
+// Timer default value
 #define MQTT_MAX_TRY             15     // Max number of MQTT connect tries before ask for turn on portal
 #define MQTT_RECONNECT_INTERVAL  5e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_RECONNECT_INTERVAL_LONG  10e3    // Time interval between each MQTT reconnection attempt, 2s by default
@@ -69,8 +69,8 @@
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
 /* 
-Implement IJTimerListener and its timerCallback function on EspClient instance
-to allow being callback when the timer triggered!
+Implement the IJTimerListener and its timerCallback function on the EspClient
+instance to enable the callback when the timer is triggered.
 */
 class EspClient : public IJTimerListener
 {
@@ -86,24 +86,21 @@ class EspClient : public IJTimerListener
     // Portal    
     void setupPortal(bool blocking=false);
 
-    void setup();
-    void loop(); // Main loop, to call at each sketch loop()
+    void setup(); // Config and connection establishment: WiFi, MQTT, OTA, Init Sensors, etc.
+    void loop();  // Run EspClient tasks: sensor measurement and publishing, web portal handling, actuator MQTT commands, and Wi-Fi/MQTT reconnections.
 
     virtual void timerCallback(Timer& timer);
 
   protected:
-    // std::vector<Sensor> sensors;
-
-    // Settings
-    // Settings settings;
 
   private:
+    // Singleton desing pattern required
     // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return
     EspClient() {};
     EspClient(const EspClient&) = delete; // deleting copy constructor.
     EspClient& operator=(const EspClient&) = delete; // deleting copy operator.
 
-    // restart code
+    // Restart code
     enum RsCode{
       RS_NORMAL,
       RS_WIFI_DISCONNECT,
@@ -114,21 +111,15 @@ class EspClient : public IJTimerListener
 
     void _restart(RsCode code=RS_NORMAL);  // restart the device
 
-    // bool _mqttCleanSession;
-    // char* _mqttLastWillTopic;
-    // char* _mqttLastWillMessage;
-    // bool _mqttLastWillRetain;
-    // unsigned int _failedMQTTConnectionAttemptCount;
-
   private:
     bool _NtpSynched = false;
 
-    // Config ortal related
+    // Web portal related
     bool _portalOn = false;         // indicate if configuration portal is on
     bool _portalSubmitted = false;  // The configuration form submitted
     char _portalReason[50];         // reason of open portal (Not used at this moment.)
 
-    AsyncWebServer _webServer = AsyncWebServer(80);
+    AsyncWebServer _webServer = AsyncWebServer(80);  // Mini web server object
 
     // WiFi related
     bool _wifiConnected = false;
@@ -148,7 +139,6 @@ class EspClient : public IJTimerListener
 
     // OTA related 
     void _setupOTA();
-
     void _cmdHandler(const char* topic, const char* payload);
 
     // Timer action IDs
@@ -170,16 +160,13 @@ class EspClient : public IJTimerListener
     bool _ledBlink = true;
     bool _autoMode = true;
     std::vector<Sensor*> _sensors;
+
     void _initSensors();
     void _enableSensor(const char* name, bool enable);
     void _measure();
     void _blink();
 
-    // Utility functions
-    // void _resetWifi();
-    // static void _extractIpAddress(const char* sourceString, short* ipAddress);
-
-    // void _listDir(fs::FS &fs, const char * dirname, uint8_t levels=0);
+    // Helper function for debug info
     void _printLine() {
       #ifdef _DEBUG
         Serial.println(F("----------------------------------------------"));

@@ -18,11 +18,10 @@ class Config
     // Configuration Json doc object
     StaticJsonDocument<JSON_CAPACITY> doc;
 
-    //------------------------------------------------
     // Module name
     String module="Module-New";   // Module name used for MQTT client name, as well as OTA host name, e.g., OilGauge
 
-    // Wifi
+    // WiFi settings
     String ssid;    // SSID
     String pass;    // Password
     String ip;      // Fixed IP if specified
@@ -31,11 +30,11 @@ class Config
     String apPass;  // SoftAP pass
     String otaPass; // OTA pass
 
-    // MQTT broker
-    String mqttServer;
-    uint16_t mqttPort = 1883;
-    String mqttUser;
-    String mqttPass;
+    // MQTT broker settings
+    String mqttServer;        // Broker IP or domain name
+    uint16_t mqttPort = 1883; // Port, default to 1883
+    String mqttUser;          // User
+    String mqttPass;          // Password
 
   void printConfig();
 #ifdef _DEBUG

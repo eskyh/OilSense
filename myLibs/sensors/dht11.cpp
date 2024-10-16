@@ -7,7 +7,7 @@ DH11::DH11(const char* name, uint8_t dhtPin)
   _dht.begin();
 }
 
-// _timestamp is the one of the lastest measure
+// Generate MQTT message payload based on current measurement
 char* DH11::getPayload()
 {
 	static char payload[100];

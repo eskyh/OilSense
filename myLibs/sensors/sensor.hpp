@@ -7,7 +7,7 @@
 #include "band.hpp"
 
 /*
- * Sonar readings with median noise filtering
+ * Base Sensor class for all derived sensor classes, e.g., SR04, DH11, VL53L0X, etc
  */
 class Sensor
 {
@@ -27,8 +27,8 @@ class Sensor
     void setBand(BandType type, uint16_t gap, bool pct); // set all bands to the same type
     void setBand(int index, BandType type, uint16_t gap, bool pct); // set specific band
 
-    void setMqtt(AsyncMqttClient *pClient, const char* topic, int qos=0, bool retain=false);
-    void sendMeasure();
+    void setMqtt(AsyncMqttClient *pClient, const char* topic, int qos=0, bool retain=false); // set MQTT client
+    void sendMeasure(); // send measurement using MQTT message
 		virtual char* getPayload() = 0;
 		virtual ~Sensor();
 
@@ -48,10 +48,10 @@ class Sensor
     virtual bool _read() = 0; // overload this function to read sensor values
   
 		int _nMeasures; 		
-		float *_measures = NULL; // save final measures. Filter processed measures are saved in here. Length: _nMeasures
-    Filter** _filters = NULL;
+		float *_measures = NULL;  // Save the measures. Filter processed measures are saved here. Length: _nMeasures
+    Filter** _filters = NULL; // Data filter pointer
     Band** _bands = NULL;
 
   private:
-    bool _enabled = true;
+    bool _enabled = true;  // If this sensor is enabled
 };

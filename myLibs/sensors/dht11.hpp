@@ -4,7 +4,7 @@
 #include "DHT.h"
 
 /*
- * Sonar readings with median noise filtering
+ * DH11 temperature / humidity sensor class
  */
 class DH11 : public Sensor
 {
