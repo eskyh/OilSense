@@ -24,6 +24,7 @@ void setup()
 void loop()
 {
   //-- Run EspClient tasks:
-  // sensor measurement and publishing, mini web server, and other related tasks.
+  // sensor measurement and publishing, web portal handling,
+  // actuator MQTT commands, and Wi-Fi/MQTT reconnections.
   espClient.loop();
 }

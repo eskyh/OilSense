@@ -12,24 +12,12 @@
 
 #ifdef ESP8266
   #include <ESP8266WiFi.h>
-  // #include <ESP8266WebServer.h>
-  // #include <ESP8266mDNS.h>
-  // #include <ESP8266HTTPUpdateServer.h>
 
   #define ESPmDNS ESP8266mDNS
   #define WebServer ESP8266WebServer
 
-  // #define DEFAULT_MQTT_CLIENT_NAME "ESP8266"
-  // #define ESPHTTPUpdateServer ESP8266HTTPUpdateServer
-
 #elif defined(ESP32)
   #include <WiFi.h>
-  // #include <WebServer.h>
-  // #include <ESPmDNS.h>
-  // #include "ESP32HTTPUpdateServer.h"
-
-  // #define DEFAULT_MQTT_CLIENT_NAME "ESP32"
-  // #define ESPHTTPUpdateServer ESP32HTTPUpdateServer
 
   #define LED_BUILTIN 33
 #else
@@ -39,6 +27,8 @@
 // Known issu: ESP32 FS.h does not have interface to get used/max disk space!!
 
 //----------------------
+// MQTT command message topics
+
 #define MQTT_SUB_CMD 	"/cmd/#"
 
 #define CMD_OPEN_PORTAL "/cmd/portal"     // this is not sent from MQTT, instead sent from wifi module when there is connection issues!!
@@ -52,7 +42,7 @@
 #define CMD_RESET_WIFI  "/cmd/reset_wifi"  // earase wifi credential from flash
 #define CMD_SSR_FILTER  "/cmd/filter"
 
-// #define CMD_SSR_SR04    "/cmd/on/sr04"  // turn on/off the measure
+// #define CMD_SSR_SR04    "/cmd/on/sr04"  // toggle the sensor on/off
 // #define CMD_SSR_VL53    "/cmd/on/vl53"
 // #define CMD_SSR_DH11    "/cmd/on/dh11"
 
@@ -68,6 +58,8 @@
 //----------------------
 
 
+//---------------------------------------
+// Some timer default value
 #define MQTT_MAX_TRY             15     // Max number of MQTT connect tries before ask for turn on portal
 #define MQTT_RECONNECT_INTERVAL  5e3    // Time interval between each MQTT reconnection attempt, 2s by default
 #define MQTT_RECONNECT_INTERVAL_LONG  10e3    // Time interval between each MQTT reconnection attempt, 2s by default
@@ -76,9 +68,9 @@
 
 typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
 
-/* JTimer:: To allow callbacks on class instances you should let your class implement
-IJTimerListener and implement its timerCallback function as shown below.
-Check examples in https://gitlab.com/arduino-libraries/stens-timer
+/* 
+Implement IJTimerListener and its timerCallback function on EspClient instance
+to allow being callback when the timer triggered!
 */
 class EspClient : public IJTimerListener
 {
