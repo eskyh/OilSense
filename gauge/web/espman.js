@@ -1,6 +1,6 @@
 /*
- Web portal generation DHTML: Three tabs
- Device configuration, File management and System
+ Web portal DHTML: Add/Remove Sensors, Pin configurations
+ AJAX based configuration update, File management and System firmware upload, restart
 */
 
 // getElementById

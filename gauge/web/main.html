@@ -4,32 +4,6 @@
 <meta charset='utf-8'>
 <title>ESP Device Setup</title>
 <link rel="stylesheet" type="text/css" href="style.css">
-<!--script>
-beforeSubmit = function()
-{
-  // assign names to all inputs
-  var sensors = document.getElementById("sensors");
-  for (var i = 0, s = 0; i < sensors.childNodes.length; i++)
-  {
-    var sensor = sensors.childNodes[i];
-    var npin = 0;
-    if (sensor.childNodes.length == 0) continue;
-    var sname = "sensor[" + s + "]";
-    for (var j = 0; j < sensor.childNodes.length; j++)
-    {
-      var itm = sensor.childNodes[j];
-      if (itm.name == 'name') itm.name = sname + "[name]";
-      else if (itm.name == 'type') itm.name = sname + "[type]";
-      else if (itm.name == 'pin')
-      {
-        itm.name = sname + "[pin][" + npin + "]";
-        npin++;
-      }
-    }
-    s++;
-  }
-}
-</script-->
 
 </head> 
 <body>
