@@ -2,17 +2,17 @@
 	"module": "OilGauge",
 	"wifi": {
 		"ssid": "ESky",
-		"pass": "Hcjwin66"
+		"pass": "pass@123"
 	},
 	"ip": "",
 	"gateway": "",
-	"appass": "@1234567",
-	"otapass": "Hcjmosaic@66",
+	"appass": "pass@123",
+	"otapass": "pass@123",
 	"mqtt": {
 		"server": "raspberrypi.local",
 		"port": 1883,
 		"user": "cjjiot",
-		"pass": "Hcjmosaic@66"
+		"pass": "pass@123"
 	},
 	"sensors": [
 		{"type": "HC-SR04", "name": "sr04", "pins": {"pinTrig": 5,"pinEcho": 4}},
