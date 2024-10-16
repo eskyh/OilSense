@@ -11,17 +11,17 @@
 #include "vector"
 
 #ifdef ESP8266
-  #include <ESP8266WiFi.h>
+#include <ESP8266WiFi.h>
 
-  #define ESPmDNS ESP8266mDNS
-  #define WebServer ESP8266WebServer
+#define ESPmDNS ESP8266mDNS
+#define WebServer ESP8266WebServer
 
 #elif defined(ESP32)
-  #include <WiFi.h>
+#include <WiFi.h>
 
-  #define LED_BUILTIN 33
+#define LED_BUILTIN 33
 #else
-    #error Platform not supported
+#error Platform not supported
 #endif
 
 // Known issu: ESP32 FS.h does not have interface to get used/max disk space!!
@@ -29,18 +29,18 @@
 //----------------------
 // Actuator MQTT command message topics
 
-#define MQTT_SUB_CMD 	"/cmd/#"
+#define MQTT_SUB_CMD "/cmd/#"
 
-#define CMD_OPEN_PORTAL "/cmd/portal"     // this is not sent from MQTT, instead sent from wifi module when there is connection issues!!
+#define CMD_OPEN_PORTAL "/cmd/portal" // this is not sent from MQTT, instead sent from wifi module when there is connection issues!!
 
-#define CMD_SLEEP       "/cmd/sleep"
-#define CMD_LED_BLINK   "/cmd/ledblink"
-#define CMD_AUTO        "/cmd/auto"       // auto or manual mode for measurement
-#define CMD_MEASURE     "/cmd/measure"
-#define CMD_INTERVAL    "/cmd/interval"
-#define CMD_RESTART     "/cmd/restart"
-#define CMD_RESET_WIFI  "/cmd/reset_wifi"  // earase wifi credential from flash
-#define CMD_SSR_FILTER  "/cmd/filter"
+#define CMD_SLEEP "/cmd/sleep"
+#define CMD_LED_BLINK "/cmd/ledblink"
+#define CMD_AUTO "/cmd/auto" // auto or manual mode for measurement
+#define CMD_MEASURE "/cmd/measure"
+#define CMD_INTERVAL "/cmd/interval"
+#define CMD_RESTART "/cmd/restart"
+#define CMD_RESET_WIFI "/cmd/reset_wifi" // earase wifi credential from flash
+#define CMD_SSR_FILTER "/cmd/filter"
 
 // #define CMD_SSR_SR04    "/cmd/on/sr04"  // toggle the sensor on/off
 // #define CMD_SSR_VL53    "/cmd/on/vl53"
@@ -50,126 +50,127 @@
 // #define MQTT_PUB_VL53   "/sensor/vl53"
 // #define MQTT_PUB_DH11   "/sensor/dh11"
 
-#define MQTT_PUB_HEARTBEAT  "/heartbeat"
+#define MQTT_PUB_HEARTBEAT "/heartbeat"
 
 // #define MQTT_PUB_INFO       "/msg/info"
 // #define MQTT_PUB_WARN       "/msg/warn"
 // #define MQTT_PUB_ERROR      "/msg/error"
 //----------------------
 
-
 //---------------------------------------
 // Timer default value
-#define MQTT_MAX_TRY             15     // Max number of MQTT connect tries before ask for turn on portal
-#define MQTT_RECONNECT_INTERVAL  5e3    // Time interval between each MQTT reconnection attempt, 2s by default
-#define MQTT_RECONNECT_INTERVAL_LONG  10e3    // Time interval between each MQTT reconnection attempt, 2s by default
-#define MQTT_SUBSCRIBE_DELAY     1e3    // MQTT subscribe attempt delay after connected
-#define WIFI_CONNECTING_TIMEOUT  20e3   // Wifi connecting timeout, 20s by default
+#define MQTT_MAX_TRY 15                   // Max number of MQTT connect tries before ask for turn on portal
+#define MQTT_RECONNECT_INTERVAL 5e3       // Time interval between each MQTT reconnection attempt, 2s by default
+#define MQTT_RECONNECT_INTERVAL_LONG 10e3 // Time interval between each MQTT reconnection attempt, 2s by default
+#define MQTT_SUBSCRIBE_DELAY 1e3          // MQTT subscribe attempt delay after connected
+#define WIFI_CONNECTING_TIMEOUT 20e3      // Wifi connecting timeout, 20s by default
 
-typedef std::function<void(const char* topic, const char* payload)> CommandHandler;
+typedef std::function<void(const char *topic, const char *payload)> CommandHandler;
 
-/* 
+/*
 Implement the IJTimerListener and its timerCallback function on the EspClient
 instance to enable the callback when the timer is triggered.
 */
 class EspClient : public IJTimerListener
 {
   // Singleton design (e.g., private constructor)
-  public:
-    static EspClient& instance();
-    ~EspClient() {};
+public:
+  static EspClient &instance();
+  ~EspClient() {};
 
-    AsyncMqttClient mqttClient;
+  AsyncMqttClient mqttClient;
 
-    inline bool isConnected() const { return _wifiConnected && _mqttConnected && _NtpSynched; }; // Return true if everything is connected
+  inline bool isConnected() const { return _wifiConnected && _mqttConnected && _NtpSynched; }; // Return true if everything is connected
 
-    // Portal    
-    void setupPortal(bool blocking=false);
+  // Portal
+  void setupPortal(bool blocking = false);
 
-    void setup(); // Config and connection establishment: WiFi, MQTT, OTA, Init Sensors, etc.
-    void loop();  // Run EspClient tasks: sensor measurement and publishing, web portal handling, actuator MQTT commands, and Wi-Fi/MQTT reconnections.
+  void setup(); // Config and connection establishment: WiFi, MQTT, OTA, Init Sensors, etc.
+  void loop();  // Run EspClient tasks: sensor measurement and publishing, web portal handling, actuator MQTT commands, and Wi-Fi/MQTT reconnections.
 
-    virtual void timerCallback(Timer& timer);
+  virtual void timerCallback(Timer &timer);
 
-  protected:
+protected:
+private:
+  // Singleton desing pattern required
+  // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return
+  EspClient() {};
+  EspClient(const EspClient &) = delete;            // deleting copy constructor.
+  EspClient &operator=(const EspClient &) = delete; // deleting copy operator.
 
-  private:
-    // Singleton desing pattern required
-    // https://stackoverflow.com/questions/448056/c-singleton-getinstance-return
-    EspClient() {};
-    EspClient(const EspClient&) = delete; // deleting copy constructor.
-    EspClient& operator=(const EspClient&) = delete; // deleting copy operator.
+  // Restart code
+  enum RsCode
+  {
+    RS_NORMAL,
+    RS_WIFI_DISCONNECT,
+    RS_MQTT_DISCONNECT,
+    RS_DISCONNECT,
+    RS_CFG_CHANGE
+  };
 
-    // Restart code
-    enum RsCode{
-      RS_NORMAL,
-      RS_WIFI_DISCONNECT,
-      RS_MQTT_DISCONNECT,
-      RS_DISCONNECT,
-      RS_CFG_CHANGE
-    };
+  void _restart(RsCode code = RS_NORMAL); // restart the device
 
-    void _restart(RsCode code=RS_NORMAL);  // restart the device
+private:
+  bool _NtpSynched = false;
 
-  private:
-    bool _NtpSynched = false;
+  // Web portal related
+  bool _portalOn = false;        // indicate if configuration portal is on
+  bool _portalSubmitted = false; // The configuration form submitted
+  char _portalReason[50];        // reason of open portal (Not used at this moment.)
 
-    // Web portal related
-    bool _portalOn = false;         // indicate if configuration portal is on
-    bool _portalSubmitted = false;  // The configuration form submitted
-    char _portalReason[50];         // reason of open portal (Not used at this moment.)
+  AsyncWebServer _webServer = AsyncWebServer(80); // Mini web server object
 
-    AsyncWebServer _webServer = AsyncWebServer(80);  // Mini web server object
+  // WiFi related
+  bool _wifiConnected = false;
+  void _setupWifi();
+  void _connectToWifi();
 
-    // WiFi related
-    bool _wifiConnected = false;
-    void _setupWifi();
-    void _connectToWifi();
+  void _startAP();
+  void _stopAP();
 
-    void _startAP();
-    void _stopAP();
+  // MQTT related
+  bool _mqttConnected = false;
+  void _setupMQTT();
+  void _connectToMqttBroker();
+#ifdef _DEBUG
+  void _printMqttDisconnectReason(AsyncMqttClientDisconnectReason reason);
+#endif
 
-    // MQTT related
-    bool _mqttConnected = false;
-    void _setupMQTT();
-    void _connectToMqttBroker();
-  #ifdef _DEBUG
-    void _printMqttDisconnectReason(AsyncMqttClientDisconnectReason reason);
-  #endif
+  // OTA related
+  void _setupOTA();
+  void _cmdHandler(const char *topic, const char *payload);
 
-    // OTA related 
-    void _setupOTA();
-    void _cmdHandler(const char* topic, const char* payload);
+  // Timer action IDs
+  enum
+  {
+    ACT_HEARTBEAT, // heartbeat
+    ACT_MEASURE,   // sensor measure timer
 
-    // Timer action IDs
-    enum {
-      ACT_HEARTBEAT,            // heartbeat
-      ACT_MEASURE,              // sensor measure timer
-      
-      ACT_MQTT_RECONNECT,       // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
-      
-      //-- One-off timers
-      ACT_MQTT_SUBSCRIBE,       // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
-      // ACT_CMD_RESET_WIFI,
-      ACT_CMD_SYNC_NTP,         // synch internet time
-      ACT_CMD_RESTART,          // restart
-      ACT_CMD_MEASURE           // manual measure timer
-    };
+    ACT_MQTT_RECONNECT, // MQTT reconnect try (max count of try defined in _nMaxMqttReconnect)
 
-    // Sensors
-    bool _ledBlink = true;
-    bool _autoMode = true;
-    std::vector<Sensor*> _sensors;
+    //-- One-off timers
+    ACT_MQTT_SUBSCRIBE, // MQTT subscribe action better delay sometime when MQTT connected. This is delayed time out for subscribing
+    // ACT_CMD_RESET_WIFI,
+    ACT_CMD_SYNC_NTP, // synch internet time
+    ACT_CMD_RESTART,  // restart
+    ACT_CMD_MEASURE   // manual measure timer
+  };
 
-    void _initSensors();
-    void _enableSensor(const char* name, bool enable);
-    void _measure();
-    void _blink();
+  // Sensors
+  bool _ledBlink = true;
+  bool _autoMode = true;
+  std::vector<Sensor *> _sensors;
 
-    // Helper function for debug info
-    void _printLine() {
-      #ifdef _DEBUG
-        Serial.println(F("----------------------------------------------"));
-      #endif
-    }
+  void _initSensors();
+  void _enableSensor(const char *name, bool enable);
+  void _measure();
+  void _blink();
+
+  // Helper function for debug info
+  void _printLine()
+  {
+#ifdef _DEBUG
+    Serial.println(F("----------------------------------------------"));
+#endif
+  }
 };

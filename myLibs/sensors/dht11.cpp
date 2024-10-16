@@ -2,7 +2,7 @@
 
 // dhtPin: Digital pin connected to the DHT sensor
 DH11::DH11(const char* name, uint8_t dhtPin)
-	 : Sensor(name, 5, FT_None), _dht(dhtPin, DHT11)
+   : Sensor(name, 5, FT_None), _dht(dhtPin, DHT11)
 {
   _dht.begin();
 }
@@ -10,22 +10,22 @@ DH11::DH11(const char* name, uint8_t dhtPin)
 // Generate MQTT message payload based on current measurement
 char* DH11::getPayload()
 {
-	static char payload[100];
+  static char payload[100];
   char tmp[30];
-	// snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f,\"heatindex\":%.1f}",
-	// 	_timestamp*1000,
-	// 	_measures[0],
-	// 	_measures[1],
-	// 	_measures[4]);
+  // snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f,\"heatindex\":%.1f}",
+  // 	_timestamp*1000,
+  // 	_measures[0],
+  // 	_measures[1],
+  // 	_measures[4]);
 
   if(!_bands[0]->status && !_bands[1]->status) return NULL;
 
-	// snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f}",
+  // snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"humidity\":%.1f,\"temperature\":%.1f}",
   //   _timestamp,
-	// 	_measures[0],
-	// 	_measures[1]);
+  // 	_measures[0],
+  // 	_measures[1]);
 
-	snprintf(payload, sizeof(payload), "{\"timestamp\":%lld", _timestamp);
+  snprintf(payload, sizeof(payload), "{\"timestamp\":%lld", _timestamp);
   
   if(_bands[0]->status)
   {
@@ -60,9 +60,9 @@ bool DH11::_read()
 
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) || isnan(f)) {
-		#ifdef DEBUG
+    #ifdef DEBUG
       Serial.println("Failed to read from DHT sensor!");
-		#endif
+    #endif
     return false;
   }
 
@@ -70,12 +70,12 @@ bool DH11::_read()
   float hif = _dht.computeHeatIndex(f, h);
   // Compute heat index in Celsius (isFahreheit = false)
   float hic = _dht.computeHeatIndex(t, h, false);
-	
+  
   _measures[0] = h;
-	_measures[1] = t;
-	_measures[2] = f;
-	_measures[3] = hif;
-	_measures[4] = hic;
+  _measures[1] = t;
+  _measures[2] = f;
+  _measures[3] = hif;
+  _measures[4] = hic;
 
-	return true;
+  return true;
 }

@@ -10,11 +10,11 @@ void setup()
 
   // Initialize digital pin LED_BUILTIN as an output (used as ESP heartbeat indicator).
   pinMode(LED_BUILTIN, OUTPUT);
-  // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)    
-  digitalWrite(LED_BUILTIN, HIGH); 
+  // Turn the LED on (LOW) or off (HIGH) as needed. (NOTE: It is inverted.)
+  digitalWrite(LED_BUILTIN, HIGH);
 
   //-- Serial Communication baudrate options: 9600, 115200, 250000
-  Serial.begin(115200);            
+  Serial.begin(115200);
 
   //-- EspClient config and connection establishment:
   //   WiFi, MQTT, OTA, Init Sensors, etc.

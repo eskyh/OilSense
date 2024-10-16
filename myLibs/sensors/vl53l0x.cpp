@@ -1,27 +1,29 @@
 #include "vl53l0x.hpp"
 
-VL53L0X::VL53L0X(const char* name)
-	 : Sensor(name, 1, Median)
+VL53L0X::VL53L0X(const char *name)
+    : Sensor(name, 1, Median)
 {
-  if(!_lox.begin())
+  if (!_lox.begin())
   {
     Serial.println("Failed to boot VL53L0X");
     _ready = false;
-  }else
+  }
+  else
   {
-	  _ready = true;
+    _ready = true;
   }
 }
 
 // _timestamp is the one of the lastest measure
-char* VL53L0X::getPayload()
+char *VL53L0X::getPayload()
 {
-	static char payload[50];
+  static char payload[50];
   // snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"distance\":%.1f}",
-  //   _timestamp*1000, _measures[0]);
+  //          _timestamp*1000, _measures[0]);
 
-  if(!_bands[0]->status) return NULL;
-  
+  if (!_bands[0]->status)
+    return NULL;
+
   snprintf(payload, sizeof(payload), "{\"timestamp\":%lld,\"distance\":%.1f}", _timestamp, _measures[0]);
   return payload;
 }
@@ -31,20 +33,21 @@ bool VL53L0X::_read()
 {
   bool res = false;
 
-  if(_ready)
+  if (_ready)
   {
     VL53L0X_RangingMeasurementData_t measure;
     _lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    
+
     if (measure.RangeStatus != 4)
-    {  // phase failures have incorrect data
-      _measures[0] = measure.RangeMilliMeter/10.0;
+    { // phase failures have incorrect data
+      _measures[0] = measure.RangeMilliMeter / 10.0;
       res = true;
     }
-    else {
-      #ifdef DEBUG
-        Serial.printf("%s: out of range.\n", _name);
-      #endif
+    else
+    {
+#ifdef DEBUG
+      Serial.printf("%s: out of range.\n", _name);
+#endif
     }
   }
 

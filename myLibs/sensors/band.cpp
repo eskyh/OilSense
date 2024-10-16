@@ -15,37 +15,39 @@ bool Band::check(double measure)
 {
   status = false;
 
-  if(_type == BT_None || _last == 0)
+  if (_type == BT_None || _last == 0)
   {
     _last = measure;
     status = true;
   }
 
-	float gap = _pct ? _last*_gap/100.0 : _gap;
+  float gap = _pct ? _last * _gap / 100.0 : _gap;
   float delta = abs(measure - _last);
 
-  if(delta == 0)
+  if (delta == 0)
   {
-    if(_type == BandType::Deadband0 || _type == BandType::Narrowband0)
+    if (_type == BandType::Deadband0 || _type == BandType::Narrowband0)
     {
       _last = measure;
       status = true;
     }
-  }else if(delta > gap)
+  }
+  else if (delta > gap)
   {
-    if(_type == BandType::Deadband0 || _type == BandType::Deadband1)
+    if (_type == BandType::Deadband0 || _type == BandType::Deadband1)
     {
       _last = measure;
       status = true;
     }
-  }else if(delta < gap)
+  }
+  else if (delta < gap)
   {
-    if(_type == BandType::Narrowband0 || _type == BandType::Narrowband1)
+    if (_type == BandType::Narrowband0 || _type == BandType::Narrowband1)
     {
       _last = measure;
       status = true;
     }
   }
 
-	return status;
+  return status;
 }
