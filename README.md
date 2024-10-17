@@ -24,11 +24,16 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 [**`/myLibs/network/`**](https://github.com/eskyh/OilSense/tree/main/myLibs/network)
 
-`EspClient.hpp, EspClient.cpp` : Main class contol function, singleton.
+[`EspClient.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/EspClient.hpp), 
+[`EspClient.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/EspClient.cpp): Main class contol function, singleton.
 
-`JTimer.h, JTimer.cpp` : Main timer class function used in EspClient class, singleton.
 
-`Config.hpp, Config.cpp` : The configuration management function class
+[`JTimer.h`](https://github.com/eskyh/OilSense/tree/main/gauge/web/JTimer.h), 
+[`JTimer.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/JTimer.cpp): Main timer class function used in EspClient class, singleton.
+
+
+[`Config.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/Config.hpp), 
+[`Config.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/EspClient.cpp) : The configuration management function class
 
 <img src="doc/EspClient.svg" title="" alt="EspClient class diagram" data-align="center">
 
@@ -38,13 +43,21 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 [**`/myLibs/sensors/`**](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors)
 
-`sensor.hpp, sensor.cpp`: The base **Sensor** calss for other derived specific sensors below:
 
-- `sr04.hpp, sr04.cpp`: Ultrasonic range sensor class for the HC-SR04.
+[`sensor.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sensor.hpp), 
+[`sensor.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sensor.cpp): The base **Sensor** calss for other derived specific sensors below:
 
-- `dht11.hpp, dht11.cpp`: Temperature and humidity sensor class for DHT11.
+- 
+[`sr04.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sr04.hpp), 
+[`sr04.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sr04.cpp): Ultrasonic range sensor class for the HC-SR04.
 
-- `vl53l0x.hpp, vl53l0x.cpp` : Infrared distance sensor class for VL53L0X.
+- 
+[`dht11.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/dht11.hpp), 
+[`dht11.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/dht11.cpp): Temperature and humidity sensor class for DHT11.
+
+- 
+[`vl53l0x.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/vl53l0x.hpp), 
+[`vl53l0x.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/vl53l0x.cpp): Infrared distance sensor class for VL53L0X.
 
     
 
@@ -68,24 +81,26 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [**`/gauge/web/`**](https://github.com/eskyh/OilSense/tree/main/gauge/web)
 
-`main.html` : A lightweight, all-in-one web portal developed for smart sensor management. Users can configure settings and perform firmware upgrades over Wi-Fi. This file relies on the following JavaScript and CSS code.
+[`main.html`](https://github.com/eskyh/OilSense/tree/main/gauge/web/main.html) : A lightweight, all-in-one web portal developed for smart sensor management. Users can configure settings and perform firmware upgrades over Wi-Fi. This file relies on the following JavaScript and CSS code.
 
-`espman.js` :  JavaScript code provides the following functions for the web portal: adding/removing sensors, pin configurations, AJAX-based configuration updates, file management, system firmware uploads, and device restarts.
+[`espman.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/espmain.js) :  JavaScript code provides the following functions for the web portal: adding/removing sensors, pin configurations, AJAX-based configuration updates, file management, system firmware uploads, and device restarts.
 
-`filedrag.js` :JavaScript code enabling drag-and-drop functionality on the *File Management* page of the web portal.
+[`filedrag.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/filedrag.js) :JavaScript code enabling drag-and-drop functionality on the *File Management* page of the web portal.
 
-`style.css` : The stylesheet for the web portal.
+[`style.css`](https://github.com/eskyh/OilSense/tree/main/gauge/web/style.css) : The stylesheet for the web portal.
 
-`release.bat` : A batch command file compresses the `main.html` and all supporting script files into a single HTML, then gzips it. This significantly improves web portal access performance.
+[`release.bat`](https://github.com/eskyh/OilSense/tree/main/gauge/web/release.bat) : A batch command file compresses the `main.html` and all supporting script files into a single HTML, then gzips it. This significantly improves web portal access performance.
 
-`/config/` :  This subfolder contains three sample configuration JSON files.
+[`/config/`](https://github.com/eskyh/OilSense/tree/main/gauge/web/config) :  This subfolder contains three sample configuration JSON files.
 
 <img src="doc/Web_Portal.svg" title="" alt="Web portal for smart sensor" data-align="center">
 
     
-**`/tools/`**
+    
+[**`/tools/`**](https://github.com/eskyh/OilSense/tree/main/gauge/tools)
 
-`index.html` : A web-based tool I developed to display multi-time series data (e.g., oil level data from d`ata.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
+
+[`index.html`](https://github.com/eskyh/OilSense/tree/main/gauge/tools/index.html): A web-based tool I developed to display multi-time series data (e.g., oil level data from d`ata.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
 
     
 
@@ -95,6 +110,6 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [**`/gauge/3d_model/`**](https://github.com/eskyh/OilSense/tree/main/gauge/3d_model)
 
-A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. `model_final_subtract.3mf` is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
+A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. [`model_final_subtract.3mf`](https://github.com/eskyh/OilSense/tree/main/gauge/3d_model/model_final_subtract.3mf) is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
 
 <img src="doc/3D-Print.svg" title="" alt="3D design model" data-align="center">
