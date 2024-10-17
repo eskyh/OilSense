@@ -1,117 +1,117 @@
 html {
-	font - family: Verdana, 'Segoe UI';
-	/* display: inline-block;  */
-	/* text-align: center; */
+  font-family: Verdana, 'Segoe UI';
+  /* display: inline-block;  */
+  /* text-align: center; */
 }
 
 body {
-	margin: auto;
-	color: #212529;
-	/* background-color:# f5f5f5;*/
-	padding: 1 %;
-	font - size: 0.8 rem;
+  margin: auto;
+  color: #212529;
+  /* background-color:#f5f5f5; */
+  padding: 1%;
+  font-size: 0.8rem;
 }
 
 /*----- Tab styles -----*/
 
 /* Style the tab */
 .tab {
-	overflow: hidden;
-	border: 1 px solid #ccc;
-	background - color: #f1f1f1;
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
 }
 
 /* Style the buttons that are used to open the tab content */
 .tab button {
-	background - color: inherit;
-	float: left;
-	border: none;
-	outline: none;
-	cursor: pointer;
-	padding: 14 px 16 px;
-	transition: 0.3 s;
-	font - size: 1.1 rem;
-	/* font-weight: bold; */
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+  font-size: 1.1rem;
+  /* font-weight: bold; */
 }
 
 /* Change background color of buttons on hover */
-.tab button: hover {
-	background - color: #ddd;
+.tab button:hover {
+  background-color: #ddd;
 }
 
 /* Create an active/current tablink class */
 .tab button.active {
-	background - color: #ccc;
+  background-color: #ccc;
 }
 
 /* Style the tab content */
 .tabcontent {
-	display: none;
-	padding: 6 px 12 px;
-	border: 1 px solid #ccc;
-	border - top: none;
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
 }
 
 .tabcontent {
-	animation: fadeEffect 1 s;
-	/* Fading effect takes 1 second */
+  animation: fadeEffect 1s;
+  /* Fading effect takes 1 second */
 }
 
 /* Go from zero to full opacity */
 @keyframes fadeEffect {
-	from {
-		opacity: 0;
-	}
+  from {
+    opacity: 0;
+  }
 
-	to {
-		opacity: 1;
-	}
+  to {
+    opacity: 1;
+  }
 }
 
 /*------------------------------- */
 
 h1 {
-	font - size: 1.8 rem;
-	color: white;
+  font-size: 1.8rem;
+  color: white;
 }
 
 /* ------------------------------------------------------- */
 
 /* set lable position */
 .config {
-	/* text-align:center; */
-	/* padding: 3px; */
-	/* margin: 5px; */
-	/* float: left; */
+  /* text-align:center; */
+  /* padding: 3px; */
+  /* margin: 5px; */
+  /* float: left; */
 }
 
 /* .config > div > input, .config > div > label { */
 .config>div {
-	display: block;
-	text - align: left;
+  display: block;
+  text-align: left;
 }
 
 .config>div>label {
-	/* display: block; */
-	/* text-align: left; */
-	width: 65 px;
+  /* display: block; */
+  /* text-align: left; */
+  width: 65px;
 }
 
 #output {
-	display: block;
-	text - align: left;
-	font - size: 0.7 em;
+  display: block;
+  text-align: left;
+  font-size: 0.7em;
 }
 
 /* ------------------------------------------------------- */
 /* make sure pins div in the same line with name and type */
 .sensor>div {
-	display: inline;
+  display: inline;
 }
 
 /* left aling sensors */
 .sensors>div {
-	text - align: left;
+  text-align: left;
 }
 
 /* ------------------------------------------------------- */
@@ -119,150 +119,148 @@ h1 {
 fieldset,
 input,
 select {
-	margin - bottom: 10 px;
-	/* increase space between inputs */
-	margin - right: 10 px;
-	/* increase space between inputs */
+  margin-bottom: 10px;
+  /* increase space between inputs */
+  margin-right: 10px;
+  /* increase space between inputs */
 }
 
 legend {
-	color: blue;
-	font - size: 0.9 rem;
-	font - weight: bold;
-	display: inline - block;
+  color: blue;
+  font-size: 0.9rem;
+  font-weight: bold;
+  display: inline-block;
 }
 
 select,
 input[type="text"],
 input[type="password"] {
-	outline: 0;
-	border - width: 0 0 1 px;
-	border - color: gray;
-	font - family: Verdana,
-		'Segoe UI',
-		Roboto;
+  outline: 0;
+  border-width: 0 0 1px;
+  border-color: gray;
+  font-family: Verdana, 'Segoe UI', Roboto;
 }
 
-select: focus,
-input[type="text"]: focus {
-	border - color: orange;
+select:focus,
+input[type="text"]:focus {
+  border-color: orange;
 }
 
 label {
-	font - size: 0.8 rem;
-	display: inline - block;
-	color: #777777;
-	text-align: right;
+  font-size: 0.8rem;
+  display: inline-block;
+  color: #777777;
+  text-align: right;
 }
 
 
 /* Make config editor collapsible */
-# config_edit {
-	height: 1.5 em;
-	/* width: 50%; */
-	/* padding: 3px; */
-	transition: all 0.5 s ease;
+#config_edit {
+  height: 1.5em;
+  /* width: 50%; */
+  /* padding: 3px; */
+  transition: all 0.5s ease;
 }
 
-#config_edit: focus {
-	/* height: 4em; */
-	height: auto;
+#config_edit:focus {
+  /* height: 4em; */
+  height: auto;
 }
 
 /*------ file list table -------------*/
 
 #tbl_filelist {
-	/* font-family: Arial, Helvetica, sans-serif; */
-	font - size: 0.8 rem;
-	border - collapse: collapse;
-	width: 100 %;
-	/* width: 650px; */
+  /* font-family: Arial, Helvetica, sans-serif; */
+  font-size: 0.8rem;
+  border-collapse: collapse;
+  width: 100%;
+  /* width: 650px; */
 }
 
 #tbl_filelist td,
 #tbl_filelist th {
-	border: 1 px solid #ddd;
-	padding: 5 px;
+  border: 1px solid #ddd;
+  padding: 5px;
 }
 
-#tbl_filelist tr: nth - child(even) {
-	background - color: #f2f2f2;
+#tbl_filelist tr:nth-child(even) {
+  background-color: #f2f2f2;
 }
 
-#tbl_filelist tr: hover {
-	background - color: #ddd;
+#tbl_filelist tr:hover {
+  background-color: #ddd;
 }
 
 #tbl_filelist th {
-	/* padding-top: 5px; */
-	/* padding-bottom: 5px; */
-	text - align: left;
-	background - color: #04AA6D;
-	color: white;
+  /* padding-top: 5px; */
+  /* padding-bottom: 5px; */
+  text-align: left;
+  background-color: #04AA6D;
+  color: white;
 }
 
 /*----------file drag & drop------------*/
 
-# filedrag {
-	display: none;
-	font - weight: bold;
-	text - align: center;
-	padding: 1 em 0;
-	margin: 1 em 0;
-	color: #555;
-	border: 2px dashed # 555;
-	border - radius: 7 px;
-	cursor: default;
+#filedrag {
+  display: none;
+  font-weight: bold;
+  text-align: center;
+  padding: 1em 0;
+  margin: 1em 0;
+  color: #555;
+  border: 2px dashed #555;
+  border-radius: 7px;
+  cursor: default;
 }
 
 #filedrag.hover {
-	color: #f00;
-	border - color: #f00;
-	border - style: solid;
-	box - shadow: inset 0 3 px 4 px #888;
+  color: #f00;
+  border-color: #f00;
+  border-style: solid;
+  box-shadow: inset 0 3px 4px #888;
 }
 
 img {
-	max-width: 100%;
+  max-width: 100%;
 }
 
 pre {
-	/* width: 95%; */
-	/* height: 8em; */
-	overflow-x: auto;
-	white-space: pre-wrap;
-	white-space: -moz-pre-wrap;
-	white-space: -pre-wrap;
-	white-space: -o-pre-wrap;
-	word-wrap: break-word;
-	font-family: monospace;
-	padding: 1px 2px;
-	margin: 0 0 1em auto;
-	border: 1px solid black;
-	border-radius: .3rem;
-	background-color: # eee;
+  /* width: 95%; */
+  /* height: 8em; */
+  overflow-x: auto;
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap;
+  white-space: -pre-wrap;
+  white-space: -o-pre-wrap;
+  word-wrap: break-word;
+  font-family: monospace;
+  padding: 1px 2px;
+  margin: 0 0 1em auto;
+  border: 1px solid black;
+  border-radius: .3rem;
+  background-color: #eee;
 }
 
 #messages {
-	padding: 0 10 px;
-	margin: 1 em 0;
-	border: 1 px solid #999;
+  padding: 0 10px;
+  margin: 1em 0;
+  border: 1px solid #999;
 }
 
-# progress p {
-	display: block;
-	width: 240 px;
-	padding: 2 px 5 px;
-	margin: 2 px 0;
-	border: 1 px inset #446;
-	border-radius: 5px;
-	/* background: # eee url("progress.png") 100 % 0 repeat - y;*/
+#progress p {
+  display: block;
+  width: 240px;
+  padding: 2px 5px;
+  margin: 2px 0;
+  border: 1px inset #446;
+  border-radius: 5px;
+  /* background: #eee url("progress.png") 100% 0 repeat-y; */
 }
 
 #progress p.success {
-	background: #0c0 none 0 0 no-repeat;
+  background: #0c0 none 0 0 no-repeat;
 }
 
-# progress p.failed {
-	background: #c00 none 0 0 no - repeat;
+#progress p.failed {
+  background: #c00 none 0 0 no-repeat;
 }

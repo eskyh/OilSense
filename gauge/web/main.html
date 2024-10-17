@@ -1,6 +1,7 @@
 <html lang='en'>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta charset='utf-8'>
 <title>ESP Device Setup</title>
 <link rel="stylesheet" type="text/css" href="style.css">
@@ -80,11 +81,6 @@
 		<legend>SENSORS
 			<input type="text" id='nsensors' value='0' size='2' disabled>
 			<input type="button" value='+' id='add_sensor'>
-			<label for="board">Board:</label>
-			<select name="board" id="board">
-				<option value="WeMo D1 mini">WeMo D1 mini</option>
-				<option value="ESP32-CAM">ESP32-CAM</option>
-			</select>
 		</legend>       
 		<div id='sensors' class='sensors'></div>
 	</fieldset>
