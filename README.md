@@ -1,8 +1,8 @@
-## Home Cloud-Based Heating Oil Monitoring and Ordering Decision System
+## Smart Heating Oil Monitoring and Ordering Decision System
 
 ## 1. System Introduction
 
-This project developed a smart IoT system that combines a **Raspberry Pi Zero** as the central home cloud server (Running **Node-RED** and **MQTT** broker) with distributed smart **ultrasonic sensors** (based on the **D1 Mini-ESP8266**) to monitor home heating oil levels. The system sends alerts to your phone when oil levels drop below a set threshold and features **one-button ordering** from the best deal in the marketplace. This star architecture can easily be extended to other smart home applications, such as sump pit water level monitoring, as demonstrated in Figure 1.
+This project developed a smart IoT system that combines a **Raspberry Pi Zero** as the central home cloud server (Running **Node-RED** and **MQTT** broker) with distributed smart **ultrasonic sensors** (based on the **D1 Mini-ESP8266**) to monitor home heating oil levels. The system sends alerts to your phone when oil levels drop below a set threshold and features **one-button oil ordering** from the best deal in the marketplace. This star architecture can be easily extended to other smart home applications, such as sump pit water level monitoring, as shown in Figure 1.
 
     
 
@@ -14,21 +14,21 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 [**`/gauge/src/`**](https://github.com/eskyh/OilSense/tree/main/gauge/src)
 
-[`main.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/src/main.cpp): The main function of **D1 Mini (ESP8266)** microcontroller firmware. It calls `EspClient` class below to do:
+[`main.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/src/main.cpp): The main function of **D1 Mini (ESP8266)** microcontroller firmware. It calls `EspClient` class to do the following works:
 
-`setup()` : Executed once at the start of the program, typically used for configuration and hardware initialization. This includes loading configurations, establishing WiFi/MQTT/OTA connections, initializing sensors, and syncing time with the NTP server.
+`setup()` : Executed once at the start of the program, this phase is typically used for configuration and hardware initialization. Invoke `EspClient::setup()` to load configurations, establish WiFi/MQTT/OTA connections, initialize sensors, and sync time with the NTP server.
 
-`loop()` : Executed repeatedly (hence the name 'loop'). The `loop()` function handles tasks such as sensor measurements, MQTT subscribing/publishing messages, processing MQTT actuator commands, managing the web portal, uploading firmware via WiFi, and restarting the device.
+`loop()` : Executed repeatedly (hence the name 'loop'). Invoke `EspClient::loop()` to do sensor measurements, MQTT subscribing/publishing messages, processing MQTT actuator commands, managing the web portal, uploading firmware via WiFi, and restarting the device.
 
     
 
 [**`/myLibs/network/`**](https://github.com/eskyh/OilSense/tree/main/myLibs/network)
 
-[`EspClient.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.hpp), [`EspClient.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.cpp): Main class contol function, singleton.
+[`EspClient.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.hpp), [`EspClient.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.cpp): The primary class responsible for managing all functions in the firmware and is designed as a singleton.
 
-[`JTimer.h`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.h), [`JTimer.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.cpp): Main timer class function used in EspClient class, singleton.
+[`JTimer.h`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.h), [`JTimer.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.cpp): Designed to provide an efficient timing mechanism within the firmware. It simplifies the management of timed events and callbacks and is designed as a singleton.
 
-[`Config.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.hpp), [`Config.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.cpp) : The configuration management function class
+[`Config.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.hpp), [`Config.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.cpp) : Managing configuration settings in a JSON format.
 
 <img src="doc/EspClient.svg" title="" alt="EspClient class diagram" data-align="center">
 
@@ -68,7 +68,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [`main.html`](https://github.com/eskyh/OilSense/tree/main/gauge/web/main.html) : A lightweight, all-in-one web portal developed for smart sensor management. Users can configure settings and perform firmware upgrades over Wi-Fi. This file relies on the following JavaScript and CSS code.
 
-[`espman.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/espman.js) :  JavaScript code provides the following functions for the web portal: adding/removing sensors, pin configurations, AJAX-based configuration updates, file management, system firmware uploads, and device restarts.
+[`espman.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/espman.js) :  JavaScript code provides the following functions for the web portal: AJAX-based retrieving/updating smart sensor configuration using JSON, adding/removing sensors, pin configurations, file management, firmware uploads, and device restarts.
 
 [`filedrag.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/filedrag.js) :JavaScript code enabling drag-and-drop functionality on the *File Management* page of the web portal.
 
@@ -84,7 +84,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [**`/tools/`**](https://github.com/eskyh/OilSense/tree/main/tools)
 
-[`index.html`](https://github.com/eskyh/OilSense/tree/main/tools/index.html): A web-based tool I developed to display multi-time series data (e.g., oil level data from d`ata.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
+[`index.html`](https://github.com/eskyh/OilSense/tree/main/tools/index.html): A web-based tool I developed to display multi-time series data (e.g., oil level data from `data.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
 
     
 
@@ -96,4 +96,4 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. `model_final_subtract.3mf` is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
 
-<img src="doc/3D-Print.svg" title="" alt="3D design model" data-align="center">
+<img title="" src="doc/3D-Print.svg" alt="3D design model" data-align="center">
