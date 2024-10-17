@@ -6,7 +6,7 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
     
 
-**Figure 1. System architecture**   
+                                            **Figure 1. System architecture**   
 
 <img src="doc/System_Diagram.svg" title="" alt="System Architecture" data-align="center">
 
@@ -28,7 +28,7 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 [`JTimer.h`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.h), [`JTimer.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.cpp): Main timer class function used in EspClient class, singleton.
 
-[`Config.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.hpp), [`Config.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.cpp) : The configuration management function class
+[`Config.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.hpp), [`Config.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.cpp) : The configuration management function class
 
 <img src="doc/EspClient.svg" title="" alt="EspClient class diagram" data-align="center">
 
@@ -48,9 +48,9 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
     
 
-[`filter.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/flter.hpp), [`filter.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/flter.cpp): Data filtering algorithm classes: **Median**, **Kalman**, **EWMA**.
+[`filter.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/filter.hpp), [`filter.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/filter.cpp): Data filtering algorithm classes: **Median**, **Kalman**, **EWMA**.
 
-`band.hpp, band.cpp`:  Band filter class supporting both dead band and narrow band.
+[`band.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/band.hpp), [`band.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/band.cpp):  Band filter class supporting both dead band and narrow band.
 
     
 
@@ -68,7 +68,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [`main.html`](https://github.com/eskyh/OilSense/tree/main/gauge/web/main.html) : A lightweight, all-in-one web portal developed for smart sensor management. Users can configure settings and perform firmware upgrades over Wi-Fi. This file relies on the following JavaScript and CSS code.
 
-[`espman.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/espmain.js) :  JavaScript code provides the following functions for the web portal: adding/removing sensors, pin configurations, AJAX-based configuration updates, file management, system firmware uploads, and device restarts.
+[`espman.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/espman.js) :  JavaScript code provides the following functions for the web portal: adding/removing sensors, pin configurations, AJAX-based configuration updates, file management, system firmware uploads, and device restarts.
 
 [`filedrag.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/filedrag.js) :JavaScript code enabling drag-and-drop functionality on the *File Management* page of the web portal.
 
@@ -82,9 +82,9 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
     
 
-[**`/tools/`**](https://github.com/eskyh/OilSense/tree/main/gauge/tools)
+[**`/tools/`**](https://github.com/eskyh/OilSense/tree/main/tools)
 
-[`index.html`](https://github.com/eskyh/OilSense/tree/main/gauge/tools/index.html): A web-based tool I developed to display multi-time series data (e.g., oil level data from d`ata.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
+[`index.html`](https://github.com/eskyh/OilSense/tree/main/tools/index.html): A web-based tool I developed to display multi-time series data (e.g., oil level data from d`ata.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
 
     
 
@@ -94,6 +94,6 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [**`/gauge/3d_model/`**](https://github.com/eskyh/OilSense/tree/main/gauge/3d_model)
 
-A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. [`model_final_subtract.3mf`](https://github.com/eskyh/OilSense/tree/main/gauge/3d_model/model_final_subtract.3mf) is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
+A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. `model_final_subtract.3mf` is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
 
 <img src="doc/3D-Print.svg" title="" alt="3D design model" data-align="center">
