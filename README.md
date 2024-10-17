@@ -8,7 +8,7 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 **Figure 1. System architecture**   
 
-![System Architecture](doc/System Diagram.svg)
+![System Architecture](doc/System_Diagram.svg)
 
 ## 2. Source code structure
 
@@ -80,8 +80,10 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 `/config/` :  This subfolder contains three sample configuration JSON files.
 
-    
 
+![Web portal for smart sensor](doc/Web_Portal.svg)
+
+    
 **`/tools/`**
 
 `index.html` : A web-based tool I developed to display multi-time series data (e.g., oil level data from d`ata.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
