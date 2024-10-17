@@ -14,7 +14,7 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 [**`/gauge/src/`**](https://github.com/eskyh/OilSense/tree/main/gauge/src)
 
-`main.cpp`: The main function of **D1 Mini (ESP8266)** microcontroller firmware. It calls `EspClient` class below to do:
+[`main.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/src/main.cpp): The main function of **D1 Mini (ESP8266)** microcontroller firmware. It calls `EspClient` class below to do:
 
 `setup()` : Executed once at the start of the program, typically used for configuration and hardware initialization. This includes loading configurations, establishing WiFi/MQTT/OTA connections, initializing sensors, and syncing time with the NTP server.
 
@@ -24,16 +24,11 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 [**`/myLibs/network/`**](https://github.com/eskyh/OilSense/tree/main/myLibs/network)
 
-[`EspClient.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/EspClient.hpp), 
-[`EspClient.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/EspClient.cpp): Main class contol function, singleton.
+[`EspClient.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.hpp), [`EspClient.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.cpp): Main class contol function, singleton.
 
+[`JTimer.h`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.h), [`JTimer.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/JTimer.cpp): Main timer class function used in EspClient class, singleton.
 
-[`JTimer.h`](https://github.com/eskyh/OilSense/tree/main/gauge/web/JTimer.h), 
-[`JTimer.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/JTimer.cpp): Main timer class function used in EspClient class, singleton.
-
-
-[`Config.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/Config.hpp), 
-[`Config.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/EspClient.cpp) : The configuration management function class
+[`Config.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/Config.hpp), [`Config.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/network/EspClient.cpp) : The configuration management function class
 
 <img src="doc/EspClient.svg" title="" alt="EspClient class diagram" data-align="center">
 
@@ -43,25 +38,17 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 [**`/myLibs/sensors/`**](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors)
 
+[`sensor.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/sensor.hpp), [`sensor.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/sensor.cpp): The base **Sensor** calss for other derived sensors below:
 
-[`sensor.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sensor.hpp), 
-[`sensor.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sensor.cpp): The base **Sensor** calss for other derived specific sensors below:
+- [`sr04.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/sr04.hpp), [`sr04.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/sr04.cpp): Ultrasonic range sensor class for the HC-SR04.
 
-- 
-[`sr04.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sr04.hpp), 
-[`sr04.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/sr04.cpp): Ultrasonic range sensor class for the HC-SR04.
+- [`dht11.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/dht11.hpp), [`dht11.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/dht11.cpp): Temperature and humidity sensor class for DHT11.
 
-- 
-[`dht11.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/dht11.hpp), 
-[`dht11.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/dht11.cpp): Temperature and humidity sensor class for DHT11.
-
-- 
-[`vl53l0x.hpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/vl53l0x.hpp), 
-[`vl53l0x.cpp`](https://github.com/eskyh/OilSense/tree/main/gauge/web/vl53l0x.cpp): Infrared distance sensor class for VL53L0X.
+- [`vl53l0x.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/vl53l0x.hpp), [`vl53l0x.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/vl53l0x.cpp): Infrared distance sensor class for VL53L0X.
 
     
 
-`filter.hpp, filter.cpp`: Data filtering algorithm classes: **Median**, **Kalman**, **EWMA**.
+[`filter.hpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/flter.hpp), [`filter.cpp`](https://github.com/eskyh/OilSense/tree/main/myLibs/sensors/flter.cpp): Data filtering algorithm classes: **Median**, **Kalman**, **EWMA**.
 
 `band.hpp, band.cpp`:  Band filter class supporting both dead band and narrow band.
 
@@ -76,8 +63,6 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 * `sendMeasure()`: A method that handles data communication or publication to an MQTT broker or other destinations.
 
 <img src="doc/Sensor.svg" title="" alt="Sensor class diagram" data-align="center">
-
-    
 
 [**`/gauge/web/`**](https://github.com/eskyh/OilSense/tree/main/gauge/web)
 
@@ -96,9 +81,8 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 <img src="doc/Web_Portal.svg" title="" alt="Web portal for smart sensor" data-align="center">
 
     
-    
-[**`/tools/`**](https://github.com/eskyh/OilSense/tree/main/gauge/tools)
 
+[**`/tools/`**](https://github.com/eskyh/OilSense/tree/main/gauge/tools)
 
 [`index.html`](https://github.com/eskyh/OilSense/tree/main/gauge/tools/index.html): A web-based tool I developed to display multi-time series data (e.g., oil level data from d`ata.series.csv`) or marketplace quotes from various dealers (e.g., `data.quotes.csv` as shown below).
 
