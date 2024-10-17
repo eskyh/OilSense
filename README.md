@@ -8,7 +8,7 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 **Figure 1. System architecture**   
 
-![System Architecture](doc/System_Diagram.svg)
+<img src="doc/System_Diagram.svg" title="" alt="System Architecture" data-align="center">
 
 ## 2. Source code structure
 
@@ -30,9 +30,9 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 `Config.hpp, Config.cpp` : The configuration management function class
 
-![EspClient class diagram](doc/EspClient.svg)
+<img src="doc/EspClient.svg" title="" alt="EspClient class diagram" data-align="center">
 
-![JTimer class diagram](doc/JTimer.svg)
+<img src="doc/JTimer.svg" title="" alt="JTimer class diagram" data-align="center">
 
     
 
@@ -62,7 +62,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 * `getPayload()`: A pure virtual function that is implemented by each derived class to format the sensor's data for transmission.  
 * `sendMeasure()`: A method that handles data communication or publication to an MQTT broker or other destinations.
 
-![Sensor class diagram](doc/Sensor.svg)
+<img src="doc/Sensor.svg" title="" alt="Sensor class diagram" data-align="center">
 
     
 
@@ -80,8 +80,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 `/config/` :  This subfolder contains three sample configuration JSON files.
 
-
-![Web portal for smart sensor](doc/Web_Portal.svg)
+<img src="doc/Web_Portal.svg" title="" alt="Web portal for smart sensor" data-align="center">
 
     
 **`/tools/`**
@@ -90,7 +89,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
     
 
-![Marketplace quotes chart](doc/quotes.png)
+<img src="doc/quotes.png" title="" alt="Marketplace quotes chart" data-align="center">
 
     
 
@@ -98,4 +97,4 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. `model_final_subtract.3mf` is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
 
-![3D design model](doc/3D-Print.svg)
+<img src="doc/3D-Print.svg" title="" alt="3D design model" data-align="center">
