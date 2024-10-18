@@ -1,4 +1,4 @@
-## Smart Heating Oil Monitoring and Ordering Decision System
+## Home Cloud-based Smart Heating Oil Monitoring and Ordering Decision System
 
 ## 1. System Introduction
 
@@ -66,7 +66,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [**`/gauge/web/`**](https://github.com/eskyh/OilSense/tree/main/gauge/web)
 
-[`main.html`](https://github.com/eskyh/OilSense/tree/main/gauge/web/main.html) : A lightweight, all-in-one web portal developed for smart sensor management. Users can configure settings and perform firmware upgrades over Wi-Fi. This file relies on the following JavaScript and CSS code.
+[`main.html`](https://github.com/eskyh/OilSense/tree/main/gauge/web/main.html) : A lightweight, all-in-one web portal developed for smart sensor management on D1 Mini. Users can configure settings and perform firmware upgrades over Wi-Fi. This file relies on the following JavaScript and CSS code.
 
 [`espman.js`](https://github.com/eskyh/OilSense/tree/main/gauge/web/espman.js) :  JavaScript code provides the following functions for the web portal: AJAX-based retrieving/updating smart sensor configuration using JSON, adding/removing sensors, pin configurations, file management, firmware uploads, and device restarts.
 
@@ -77,6 +77,8 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 [`release.bat`](https://github.com/eskyh/OilSense/tree/main/gauge/web/release.bat) : A batch command file compresses the `main.html` and all supporting script files into a single HTML, then gzips it. This significantly improves web portal access performance.
 
 [`/config/`](https://github.com/eskyh/OilSense/tree/main/gauge/web/config) :  This subfolder contains three sample configuration JSON files.
+
+                                    **Figure 2. Web portal for Microcontroller**
 
 <img src="doc/Web_Portal.svg" title="" alt="Web portal for smart sensor" data-align="center">
 
@@ -97,3 +99,29 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. `model_final_subtract.3mf` is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
 
 <img title="" src="doc/3D-Print.svg" alt="3D design model" data-align="center">
+
+## 3. Node-RED Workflow and Dashboard
+
+The Node-RED data flows (Not included in this repository) consist of two components outlined below. They are rendered as dashboards that are accessible on your phone from anywhere (**NOTE**: Port forwarding needs to be configured in the home router!).
+
+1. Oil Level Monitoring: This includes oil level monitoring, data management, and dashboard functionalities. Check out the dashboard demonstration in Figure 3 and the simplified version of the actual worflow behind the scene in Figure 5 and 6.
+
+2. Oil Marketplace and Ordering: This covers the oil price marketplace and ordering functionalities. See the dashboard demonstration in Figure 4.
+
+                           **Figure 3. Dashboard of the oil monitoring system.**
+
+<img src="file:///D:/maker_projects/doc/OilGauge.svg" title="" alt="OilGauge.svg" data-align="center">
+
+                                    **Figure 4. Oil Marketplace Dashboard**
+
+<img src="file:///D:/maker_projects/doc/marketplace.svg" title="" alt="marketplace.svg" data-align="center">
+
+                    **Figure 5. Subscribed sensor data processing workflow**
+
+![flow-oilgauge.svg](D:\maker_projects\doc\flow-oilgauge.svg)
+
+          
+
+                                            **Figure 6. Actuator workflow**
+
+![flow-actuator.svg](D:\maker_projects\doc\flow-actuator.svg)
