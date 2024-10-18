@@ -1,8 +1,6 @@
 ## Home Cloud-based Smart Heating Oil Monitoring and Ordering Decision System
 
-## 1. System Introduction
-
-This project developed a smart IoT system that combines a **Raspberry Pi Zero** as the central home cloud server (Running **Node-RED** and **MQTT** broker) with distributed smart **ultrasonic sensors** (based on the **D1 Mini-ESP8266**) to monitor home heating oil levels. The system sends alerts to your phone when oil levels drop below a set threshold and features **one-button oil ordering** from the best deal in the marketplace. This star architecture can be easily extended to other smart home applications, such as sump pit water level monitoring, as shown in Figure 1.
+This project developed a smart IoT system that combines a **Raspberry Pi Zero** as the central home cloud server (Running **Node-RED** and **MQTT** broker) with distributed smart **ultrasonic sensors** (based on the **D1 Mini-ESP8266**) to monitor home heating oil levels. The system sends alerts to your phone when oil levels drop below a set threshold and features **one-button oil ordering** from the best available deal in the marketplace. This star architecture can be easily extended to other smart home applications, such as sump pit water level monitoring, as shown in Figure 1.
 
     
 
@@ -10,7 +8,59 @@ This project developed a smart IoT system that combines a **Raspberry Pi Zero** 
 
 <img src="doc/System_Diagram.svg" title="" alt="System Architecture" data-align="center">
 
-## 2. Source code structure
+## 1. Dashboard and Node-RED Workflow
+
+The Node-RED data flows consist of two components outlined below. They are rendered as dashboards that are accessible on your phone from anywhere (**NOTE**: Port forwarding needs to be configured in the home router!).
+
+1. **Oil Level Monitoring**: This includes oil level monitoring, data management, and dashboard functionalities. Check out the dashboard demonstration in Figure 2 and the simplified worflow (for convenience of demonstration) behind the scene in Figure 4 and 5.
+
+2. **Oil Marketplace and Ordering**: This covers the oil price marketplace and ordering functionalities. See the dashboard demonstration in Figure 3 and the simplified workflow behind the scene in Figure 6.
+
+                           **Figure 2. Oil level monitoring dashboard.**
+
+<img src="doc/OilGauge.svg" title="" alt="Oil level monitoring dashboard" data-align="center">
+
+                                    **Figure 3. Oil Marketplace and ordering dashboard**
+
+<img title="" src="doc/marketplace.svg" alt="Heating oil marketplace and ordering dashboard" data-align="center" width="540">
+
+                    **Figure 4. Sensor data processing workflow in Node-RED**
+
+<img src="doc/flow-oilgauge.svg" title="" alt="Sensor data processing workflow in Node-RED" data-align="center">
+
+`1. Receive sensor measurement data messages from the subscribed MQTT broker.`
+`2. Apply filtering algorithms (Median, Kalman Filter, and EWMA) to the measurements.`
+`3. Calculate the heating oil level in the tank based on the distance measured from the top of the tank to the oil surface.`
+`4. Only pass messages if the change in measurement exceeds a specified threshold.`
+`5. Display the oil level and historical data, including daily consumption, on the dashboard.`
+`6. Save oil level data to a file.`
+`7. Trigger an alarm and send a notification to mobile devices via Telegram bot.`
+`8. Toggle notifications on or off via Telegram messages or from the dashboard on mobile.`
+`9. Display diagnostic information and environmental data (temperature and humidity) on the dashboard.`
+
+    
+
+                                            **Figure 5. Actuator workflow in Node-RED**
+<img src="doc/flow-actuator.svg" title="" alt="Actuator workflow in Node-RED" data-align="center">
+
+`1. Receive heartbeat, commands, and information messages from the subscribed MQTT broker.`
+`2. Display configuration controls for MCU devices (e.g., toggle LED on/off, enable/disable automatic measurement, set measurement intervals, select data filters, enable/disable sensors, trigger a one-time measurement, restart the smart sensor, etc.`
+`3. Publish configuration options as retained messages to the MQTT broker, so all subscribed smart sensors will automatically configure themselves based on these settings.`
+`4. Publish acturator MQTT messages, so all subscribed smart sensors will execute the corresponding actions.`
+
+    
+
+                                            **Figure 6. Marketplace workflow in Node-RED**
+<img title="" src="doc/flow-marketplace.svg" alt="Marketplace workflow in Node-RED" data-align="center" width="714">
+
+`1. Collect the real-time futures data.`
+`2. Collect real-time local marketplace quotes.`
+`3. Dashboard controls and charts showing prices.`
+`4. Same as 2 but for another city.`
+`5. Set order type (cash/credit) and order amount.`
+`6. Construct order with preset form fields and placing order.`
+
+## 2. Source Code Structure
 
 [**`/gauge/src/`**](https://github.com/eskyh/OilSense/tree/main/gauge/src)
 
@@ -78,7 +128,7 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 
 [`/config/`](https://github.com/eskyh/OilSense/tree/main/gauge/web/config) :  This subfolder contains three sample configuration JSON files.
 
-                                    **Figure 2. Web portal for Microcontroller**
+                                    **Figure 7. Web portal for Microcontroller**
 
 <img src="doc/Web_Portal.svg" title="" alt="Web portal for smart sensor" data-align="center">
 
@@ -99,26 +149,3 @@ The **`Sensor`** base class encapsulates common functionalities shared across al
 A series of 3D model of internal structural components designed to support the D1 Mini and connected sensors. `model_final_subtract.3mf` is the final design, while the others are either intermediate versions or older designs where the sensor seat location caused interference with the housing.
 
 <img title="" src="doc/3D-Print.svg" alt="3D design model" data-align="center">
-
-## 3. Node-RED Workflow and Dashboard
-
-The Node-RED data flows (Not included in this repository) consist of two components outlined below. They are rendered as dashboards that are accessible on your phone from anywhere (**NOTE**: Port forwarding needs to be configured in the home router!).
-
-1. Oil Level Monitoring: This includes oil level monitoring, data management, and dashboard functionalities. Check out the dashboard demonstration in Figure 3 and the simplified version of the actual worflow behind the scene in Figure 5 and 6.
-
-2. Oil Marketplace and Ordering: This covers the oil price marketplace and ordering functionalities. See the dashboard demonstration in Figure 4.
-
-                           **Figure 3. Oil level monitoring dashboard.**
-
-<img src="doc/OilGauge.svg" title="" alt="Oil level monitoring dashboard" data-align="center">
-
-                                    **Figure 4. Oil Marketplace and ordering dashboard**
-
-<img src="doc/marketplace.svg" title="" alt="Heating oil marketplace and ordering dashboard" data-align="center">
-
-                    **Figure 5. Sensor data processing workflow in Node-RED**
-
-<img src="doc/flow-oilgauge.svg" title="" alt="Sensor data processing workflow in Node-RED" data-align="center">
-
-                                            **Figure 6. Actuator workflow in Node-RED**
-<img src="doc/flow-actuator.svg" title="" alt="Actuator workflow in Node-RED" data-align="center">
