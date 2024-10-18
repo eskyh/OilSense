@@ -108,20 +108,17 @@ The Node-RED data flows (Not included in this repository) consist of two compone
 
 2. Oil Marketplace and Ordering: This covers the oil price marketplace and ordering functionalities. See the dashboard demonstration in Figure 4.
 
-                           **Figure 3. Dashboard of the oil monitoring system.**
+                           **Figure 3. Oil level monitoring dashboard.**
 
-<img src="file:///D:/maker_projects/doc/OilGauge.svg" title="" alt="OilGauge.svg" data-align="center">
+<img src="doc/OilGauge.svg" title="" alt="Oil level monitoring dashboard" data-align="center">
 
-                                    **Figure 4. Oil Marketplace Dashboard**
+                                    **Figure 4. Oil Marketplace and ordering dashboard**
 
-<img src="file:///D:/maker_projects/doc/marketplace.svg" title="" alt="marketplace.svg" data-align="center">
+<img src="doc/marketplace.svg" title="" alt="Heating oil marketplace and ordering dashboard" data-align="center">
 
-                    **Figure 5. Subscribed sensor data processing workflow**
+                    **Figure 5. Sensor data processing workflow in Node-RED**
 
-![flow-oilgauge.svg](D:\maker_projects\doc\flow-oilgauge.svg)
+<img src="doc/flow-oilgauge.svg" title="" alt="Sensor data processing workflow in Node-RED" data-align="center">
 
-          
-
-                                            **Figure 6. Actuator workflow**
-
-![flow-actuator.svg](D:\maker_projects\doc\flow-actuator.svg)
+                                            **Figure 6. Actuator workflow in Node-RED**
+<img src="doc/flow-actuator.svg" title="" alt="Actuator workflow in Node-RED" data-align="center">
